@@ -1,0 +1,44 @@
+# Validates profile JSON. PRs / pushes use incremental semantic validation (git diff) plus a
+# full-tree pass for JSON syntax and duplicate profileId checks.
+
+name: Validate profile templates
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - master
+
+concurrency:
+  group: validate-templates-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Validate profile JSON
+        run: |
+          set -e
+          ARGS=(. --check-duplicate-profile-ids)
+          if [ "${{ github.event_name }}" = "pull_request" ]; then
+            ARGS+=(--incremental-semantic-git "${{ github.event.pull_request.base.sha }}...${{ github.event.pull_request.head.sha }}")
+          elif [ -n "${{ github.event.before }}" ] && ! echo "${{ github.event.before }}" | grep -qE '^0+$'; then
+            ARGS+=(--incremental-semantic-git "${{ github.event.before }}" "${{ github.event.after }}")
+          fi
+          python .scripts/validate_templates.py "${ARGS[@]}"
