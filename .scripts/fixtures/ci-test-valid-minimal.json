@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "profileId": "ci-test-valid-minimal",
+  "templateGroupId": "ci-test-fixture-game",
+  "displayName": "Minimal valid fixture for manual CI testing",
+  "author": "fixture",
+  "targetProcessName": "ExampleGame",
+  "keyboardActions": [
+    {
+      "id": "act-jump",
+      "keyboardKey": "Space",
+      "description": "Jump"
+    }
+  ],
+  "mappings": [
+    {
+      "from": {
+        "type": "Button",
+        "value": "A"
+      },
+      "actionId": "act-jump",
+      "trigger": "Pressed"
+    }
+  ]
+}
