@@ -6,6 +6,11 @@
 
 ## 目录结构
 
+> [!TIP]
+> **本地提前校验 (推荐)**：为了节省你的开发时间，建议在提交前配置本地 Git Hook：
+> 执行 `git config core.hooksPath .githooks` 开启本地钩子。
+> 开启后，每次执行 `git commit` 时都会自动运行校验，若不通过则无法提交，从而避免将错误推送到远程。
+
 - 按**游戏**分文件夹，文件夹名通常与模板内的 `templateCatalogFolder` 一致（例如 `Roco Kingdom`）。
 - 每个 JSON 文件对应一套**映射配置**（一个 profile），同一游戏下可有多种场景或作者变体（如探索 / 战斗、不同 `profileId`）。
 
