@@ -50,6 +50,16 @@ python .scripts/validate_templates.py . --check-duplicate-profile-ids \
 
 需 **Python 3.10+**；第三方依赖见根目录 `requirements.txt`（当前仅标准库即可运行）。
 
+### 不合规模板已经 push 了，怎么「拦住」？
+
+**事实：** 标准 GitHub（github.com）无法在服务端在 **`git push` 完成前** 拒收对象；Action 总是在推送之后跑。要「推送前拦截」只能依赖 **Enterprise 等环境的 pre-receive hook**，一般开源仓库用不到。
+
+**实际有效的拦截方式**
+
+1. **分支保护（推荐）：** 在仓库 **Settings → Branches** 为 **`main`**（以及你使用的 **`master`**）加规则：开启 **Require status checks to pass before merging**，并勾选 **Validate profile templates**；建议再开启 **Require a pull request before merging**，并按需要限制谁可直接 push、禁止强推。这样 CI 失败时 **PR 无法合并进默认分支**（坏提交可能仍在贡献者自己的分支上，但默认分支不会被污染）。
+
+2. **可选：本地 pre-commit：** 克隆后在仓库根执行一次：`git config core.hooksPath .githooks`。之后若暂存区里有 **游戏目录等处的模板 `*.json`**（不含 `.github` / `.scripts` 下仅工具用 JSON），**提交前**会跑与 CI 相同的全树校验，**不通过则 `git commit` 会失败**，很多问题在 push 之前就会被挡住。
+
 ## 如何贡献
 
 1. **Fork** 本仓库，在对应游戏文件夹下新增或修改 JSON（或新建游戏文件夹）。

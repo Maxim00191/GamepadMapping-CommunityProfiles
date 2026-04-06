@@ -1,0 +1,24 @@
+#!/bin/sh
+# Optional local gate: run `git config core.hooksPath .githooks` from the repo root.
+# When staged files include template JSON (outside .github / .scripts), validates the whole tree
+# the same way as CI (including duplicate profileId across all templates).
+
+set -e
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+STAGED=$(git diff --cached --name-only --diff-filter=ACM 2>/dev/null | grep -E '\.json$' || true)
+REL=$(printf '%s\n' "$STAGED" | grep -vE '^\.(github|scripts)/' || true)
+if [ -z "$REL" ]; then
+  exit 0
+fi
+
+PY=python3
+command -v python3 >/dev/null 2>&1 || PY=python
+if ! command -v "$PY" >/dev/null 2>&1; then
+  echo "pre-commit: Python not found; cannot validate staged template JSON." >&2
+  exit 1
+fi
+
+echo "pre-commit: validating templates (same as CI)..." >&2
+"$PY" .scripts/validate_templates.py . --check-duplicate-profile-ids

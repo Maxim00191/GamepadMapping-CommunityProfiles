@@ -50,6 +50,16 @@ python .scripts/validate_templates.py . --check-duplicate-profile-ids \
 
 Python 3.10+ is enough; optional dependencies are listed in `requirements.txt` (currently none beyond the standard library).
 
+### Blocking bad templates before they reach `main`
+
+**Reality:** a `git push` always uploads commits to GitHub first; Actions runs afterward. There is no standard way on github.com to reject a push *before* objects are stored (that would need something like Enterprise pre-receive hooks).
+
+**What actually intercepts merges**
+
+1. **Branch protection (recommended):** In the GitHub repo, **Settings → Branches → Add rule** for `main` (and `master` if you use it). Enable **Require status checks to pass before merging**, then select the **Validate profile templates** check. Prefer **Require a pull request before merging** and, if you want zero direct pushes of broken JSON, restrict who can push to the branch or disallow force-pushes. Then a red CI run means the PR **cannot be merged** until the branch is fixed (the bad commit may still exist on the contributor’s branch, but not on `main`).
+
+2. **Optional local hook:** After cloning, run once from the repo root: `git config core.hooksPath .githooks`. If a commit stages template `*.json` outside `.github` / `.scripts`, the **pre-commit** hook runs the same full-tree validation as CI and **blocks `git commit`** until it passes—so many mistakes never get pushed at all.
+
 ## Contributing
 
 1. **Fork** the repo and add or edit JSON under the right game folder (or create a new game folder).

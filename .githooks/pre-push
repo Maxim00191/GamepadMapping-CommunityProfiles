@@ -1,0 +1,32 @@
+#!/bin/sh
+# Optional local gate: run `git config core.hooksPath .githooks` from the repo root.
+# Before updates to main/master on the remote, runs the same validation as CI for the
+# pushed commit range (full JSON tree parse + duplicate profileId; semantic diff like push events).
+
+set -e
+ROOT="$(git rev-parse --show-toplevel)"
+cd "$ROOT"
+
+PY=python3
+command -v python3 >/dev/null 2>&1 || PY=python
+
+while read local_ref local_sha remote_ref remote_sha
+do
+	case "$remote_ref" in
+	refs/heads/main|refs/heads/master)
+		# Branch deletion: nothing to validate on our side
+		if [ "$local_sha" = "0000000000000000000000000000000000000000" ]; then
+			continue
+		fi
+		if ! command -v "$PY" >/dev/null 2>&1; then
+			echo "pre-push: Python is required to validate before pushing to ${remote_ref}." >&2
+			exit 1
+		fi
+		echo "pre-push: validating templates (same as CI) for push to ${remote_ref#refs/heads/}..." >&2
+		"$PY" .scripts/validate_templates.py . --check-duplicate-profile-ids \
+			--incremental-semantic-git "$remote_sha" "$local_sha"
+		;;
+	esac
+done
+
+exit 0
