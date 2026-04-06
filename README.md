@@ -50,15 +50,15 @@ python .scripts/validate_templates.py . --check-duplicate-profile-ids \
 
 Python 3.10+ is enough; optional dependencies are listed in `requirements.txt` (currently none beyond the standard library).
 
-### Blocking bad templates before they reach `main`
+### Ensuring Template Quality
 
-**Reality:** a `git push` always uploads commits to GitHub first; Actions runs afterward. There is no standard way on github.com to reject a push *before* objects are stored (that would need something like Enterprise pre-receive hooks).
+This repository uses **CI (Continuous Integration)** and **Branch Protection** to ensure all templates merged into `main` meet the required standards.
 
-**What actually intercepts merges**
-
-1. **Branch protection (recommended):** In the GitHub repo, **Settings → Branches → Add rule** for `main` (and `master` if you use it). Enable **Require status checks to pass before merging**, then select the **Validate profile templates** check. Prefer **Require a pull request before merging** and, if you want zero direct pushes of broken JSON, restrict who can push to the branch or disallow force-pushes. Then a red CI run means the PR **cannot be merged** until the branch is fixed (the bad commit may still exist on the contributor’s branch, but not on `main`).
-
-2. **Optional local hook:** After cloning, run once from the repo root: `git config core.hooksPath .githooks`. If a commit stages template `*.json` outside `.github` / `.scripts`, the **pre-commit** hook runs the same full-tree validation as CI and **blocks `git commit`** until it passes—so many mistakes never get pushed at all.
+1. **Automated Validation (CI):** Every Pull Request automatically triggers the `validate` check. If the JSON is malformed or violates business rules, the CI will fail.
+2. **Merge Requirements:** Branch protection rules are active. A PR can only be merged once the CI check passes (green ✅) and necessary reviews are completed.
+3. **Local Pre-commit Validation (Recommended):** To save time, we recommend validating your changes locally before pushing. You can run the validation script manually or set up a local Git Hook:
+   - Run `git config core.hooksPath .githooks` once to enable local hooks.
+   - Once enabled, `git commit` will automatically run the validation and block the commit if errors are found, preventing broken code from reaching GitHub.
 
 ## Contributing
 
@@ -68,6 +68,9 @@ Python 3.10+ is enough; optional dependencies are listed in `requirements.txt` (
 4. Wait for the **Validate profile templates** workflow to pass on the PR, or run the local command in **Automated checks** first.
 5. Only submit content you are allowed to share. Community mappings are provided as-is and are **not guaranteed** to match every game build or every controller layout.
 
-## License and disclaimer
+## License and Disclaimer
 
-Mapping files are submitted voluntarily by community members. Verify compatibility with your game build, client, and gamepad tool yourself. If a `LICENSE` file exists at the repository root, that file takes precedence.
+- **Community Contributions**: Mapping profiles are contributed voluntarily by the community. While we use automated validation to ensure technical correctness, we cannot guarantee compatibility with every game build, client version, or controller hardware.
+- **Use at Your Own Risk**: Users are encouraged to verify configurations before use. The maintainers and contributors are not responsible for any issues arising from the use of these third-party profiles.
+- **Licensing**: Unless otherwise specified, content in this repository is governed by the `LICENSE` file at the root. Any `LICENSE` file within a specific game folder takes precedence for that folder's content.
+

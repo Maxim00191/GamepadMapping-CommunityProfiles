@@ -50,15 +50,15 @@ python .scripts/validate_templates.py . --check-duplicate-profile-ids \
 
 需 **Python 3.10+**；第三方依赖见根目录 `requirements.txt`（当前仅标准库即可运行）。
 
-### 不合规模板已经 push 了，怎么「拦住」？
+### 如何确保模板质量？
 
-**事实：** 标准 GitHub（github.com）无法在服务端在 **`git push` 完成前** 拒收对象；Action 总是在推送之后跑。要「推送前拦截」只能依赖 **Enterprise 等环境的 pre-receive hook**，一般开源仓库用不到。
+本仓库通过 **CI (持续集成)** 和 **分支保护** 来确保所有合并到 `main` 分支的模板都符合规范。
 
-**实际有效的拦截方式**
-
-1. **分支保护（推荐）：** 在仓库 **Settings → Branches** 为 **`main`**（以及你使用的 **`master`**）加规则：开启 **Require status checks to pass before merging**，并勾选 **Validate profile templates**；建议再开启 **Require a pull request before merging**，并按需要限制谁可直接 push、禁止强推。这样 CI 失败时 **PR 无法合并进默认分支**（坏提交可能仍在贡献者自己的分支上，但默认分支不会被污染）。
-
-2. **可选：本地 pre-commit：** 克隆后在仓库根执行一次：`git config core.hooksPath .githooks`。之后若暂存区里有 **游戏目录等处的模板 `*.json`**（不含 `.github` / `.scripts` 下仅工具用 JSON），**提交前**会跑与 CI 相同的全树校验，**不通过则 `git commit` 会失败**，很多问题在 push 之前就会被挡住。
+1. **自动化校验 (CI)：** 所有的 Pull Request 都会自动触发 `validate` 检查。如果 JSON 格式错误或不符合业务规则，CI 将会报错。
+2. **合并要求：** 仓库已开启分支保护规则，只有当 CI 检查通过（显示绿色 ✅）且通过必要的代码审核后，PR 才能被合并。
+3. **本地提前校验 (推荐)：** 为了节省你的开发时间，建议在提交前进行本地校验。你可以手动运行校验脚本，或者配置本地 Git Hook：
+   - 执行 `git config core.hooksPath .githooks` 开启本地钩子。
+   - 开启后，每次执行 `git commit` 时都会自动运行校验，若不通过则无法提交，从而避免将错误推送到远程。
 
 ## 如何贡献
 
@@ -70,4 +70,7 @@ python .scripts/validate_templates.py . --check-duplicate-profile-ids \
 
 ## 许可与免责声明
 
-映射文件由社区成员自愿提交。使用前请自行核对是否与你的游戏版本、客户端及手柄工具兼容。若仓库根目录另有 `LICENSE` 文件，以该文件为准。
+- **社区贡献**：本仓库中的映射文件由社区成员自愿提交。虽然我们通过 CI 尽力确保格式正确，但无法保证其与所有游戏版本、客户端或特定手柄型号的完全兼容性。
+- **使用风险**：请在导入前自行核对配置内容。因使用第三方映射配置而产生的任何问题，需由使用者自行承担。
+- **开源许可**：除非另有说明，本仓库内容遵循根目录下的 `LICENSE` 文件。若某文件夹内另附许可说明，则该说明具有更高优先级。
+

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "profileId": "ci-test-invalid-unknown-action",
+  "templateGroupId": "ci-test-fixture-game",
+  "displayName": "Invalid fixture: mapping points to missing keyboardActions id",
+  "author": "fixture",
+  "targetProcessName": "ExampleGame",
+  "keyboardActions": [
+    {
+      "id": "act-jump",
+      "keyboardKey": "Space",
+      "description": "Jump"
+    }
+  ],
+  "mappings": [
+    {
+      "from": {
+        "type": "Button",
+        "value": "A"
+      },
+      "actionId": "this-id-is-not-in-keyboardActions",
+      "trigger": "Pressed"
+    }
+  ]
+}
