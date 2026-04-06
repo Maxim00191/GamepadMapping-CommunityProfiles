@@ -6,6 +6,11 @@ This repository hosts **community-authored gamepad mapping templates** for vario
 
 ## Repository layout
 
+> [!TIP]
+> **Local Pre-commit Validation (Recommended)**: To save time, we recommend setting up a local Git Hook before pushing:
+> Run `git config core.hooksPath .githooks` once to enable local hooks.
+> Once enabled, `git commit` will automatically run the validation and block the commit if errors are found, preventing broken code from reaching GitHub.
+
 - One **folder per game**. The folder name usually matches `templateCatalogFolder` in the template (for example, `Roco Kingdom`).
 - Each **JSON file** is one mapping profile. A game may ship multiple profiles for different scenarios or authors (e.g. exploration vs. combat, different `profileId` values).
 
