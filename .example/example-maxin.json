@@ -1,0 +1,32 @@
+{
+"schemaVersion": 1,
+  "profileId": "example-maxim0191",
+  "templateGroupId": "example-maxim0191",
+  "templateCatalogFolder": "example",
+  "displayName": "例子 - maxim0191",
+  "author": "Maxim0191",
+  "displayNameKey": "",
+  "targetProcessName": "xxx",
+  "comboLeadButtons": [
+    "LeftShoulder",
+    "Start"
+  ],
+  "keyboardActions": [
+     {
+      "id": "walk-forward",
+      "keyboardKey": "W",
+      "description": "前进"
+    }
+  ],
+  "mappings": [
+    {
+      "from": {
+        "type": "LeftThumbstick",
+        "value": "Up"
+      },
+      "actionId": "walk-forward",
+      "trigger": "Pressed",
+      "analogThreshold": 0.25
+    }
+  ]
+}
