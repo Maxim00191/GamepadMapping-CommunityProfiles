@@ -29,6 +29,8 @@ jobs:
         run: python .scripts/generate_index.py
 
       - name: Create PR for index update
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
@@ -40,7 +42,7 @@ jobs:
           git commit -m "docs: auto-update community index [skip ci]"
           git push -f origin "$BRANCH"
 
-          if gh pr view "$BRANCH" --json number >/dev/null 2>&1; then
+          if gh pr list --state open --head "$BRANCH" --base main --json number --jq 'length > 0' | grep -q true; then
             echo "PR for index update already exists, skipping creation."
           else
             gh pr create \
