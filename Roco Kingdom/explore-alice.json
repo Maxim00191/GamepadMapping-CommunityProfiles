@@ -1,0 +1,37 @@
+{
+    "schemaVersion": 1,
+    "profileId": "explore-alice",
+    "templateGroupId": "roco-kingdom-world-alice",
+    "displayName": "洛克王国世界·探索 - alice",
+    "author": "Maxim0191",
+    "displayNameKey": "",
+    "targetProcessName": "NRC-Win64-Shipping",
+    "comboLeadButtons": [
+        "RightShoulder",
+        "Start"
+    ],
+    "keyboardActions": [
+        {
+        "id": "w--move-wasd-forward",
+        "keyboardKey": "W",
+        "description": "向前移动",
+        "descriptions": {
+            "zh-CN": "向前移动"
+        }
+        }
+    ],
+    "mappings": [
+    {
+        "from": {
+            "type": "LeftThumbstick",
+            "value": "Up"
+        },
+        "actionId": "w--move-wasd-forward",
+        "description": "向前移动",
+        "trigger": "Pressed",
+        "analogThreshold": 0.25,
+        "holdKeyboardKey": "",
+        "holdThresholdMs": null
+        }
+    ]
+}
