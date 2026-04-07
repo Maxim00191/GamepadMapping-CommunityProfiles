@@ -10,7 +10,7 @@
 
 > [!TIP]
 > **本地提前校验 (推荐)**：为了节省你的开发时间，建议在提交前配置本地 Git Hook：
-> 执行 `git config core.hooksPath .githooks` 开启本地钩子。
+> 执行 `git config --local core.hooksPath .githooks` 开启本地钩子。
 > 开启后，每次执行 `git commit` 时都会自动运行校验，若不通过则无法提交，从而避免将错误推送到远程。
 
 - 按**游戏**分文件夹：文件夹名通常与模板内的 `templateCatalogFolder` 一致（例如 `Roco Kingdom`）。
