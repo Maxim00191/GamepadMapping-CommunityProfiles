@@ -1,5 +1,23 @@
 [
   {
+    "id": "onfoot-basic-maxim0191",
+    "displayName": "经典第三人称·基础步行 - maxim0191",
+    "author": "Maxim0191",
+    "description": "Template for Classic 3rd Game",
+    "catalogFolder": "Classic 3rd Game",
+    "fileName": "onfoot-basic-maxim0191.json",
+    "downloadUrl": "https://raw.githubusercontent.com/Maxim00191/GamepadMapping-CommunityProfiles/main/Classic 3rd Game/onfoot-basic-maxim0191.json"
+  },
+  {
+    "id": "driving-basic-maxim0191",
+    "displayName": "经典第三人称·基础驾驶 - maxim0191",
+    "author": "Maxim0191",
+    "description": "Template for Classic 3rd Game",
+    "catalogFolder": "Classic 3rd Game",
+    "fileName": "driving-basic-maxim0191.json",
+    "downloadUrl": "https://raw.githubusercontent.com/Maxim00191/GamepadMapping-CommunityProfiles/main/Classic 3rd Game/driving-basic-maxim0191.json"
+  },
+  {
     "id": "explore-maxim0191",
     "displayName": "洛克王国世界·探索 - maxim0191",
     "author": "Maxim0191",
