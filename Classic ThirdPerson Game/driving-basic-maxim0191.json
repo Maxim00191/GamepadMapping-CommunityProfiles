@@ -1,0 +1,283 @@
+{
+  "schemaVersion": 1,
+  "profileId": "driving-basic-maxim0191",
+  "templateGroupId": "classic-thirdperson-maxim0191",
+  "templateCatalogFolder": "Classic ThirdPerson Game",
+  "displayName": "经典第三人称·基础驾驶 - maxim0191",
+  "author": "Maxim0191",
+  "displayNameKey": "",
+  "targetProcessName": "Classic ThirdPerson Game",
+  "comboLeadButtons": [
+    "LeftShoulder",
+    "Start"
+  ],
+  "keyboardActions": [
+    {
+      "id": "drive-accelerate",
+      "keyboardKey": "W",
+      "description": "油门"
+    },
+    {
+      "id": "drive-brake-reverse",
+      "keyboardKey": "S",
+      "description": "刹车/倒车"
+    },
+    {
+      "id": "drive-left",
+      "keyboardKey": "A",
+      "description": "向左转向"
+    },
+    {
+      "id": "drive-right",
+      "keyboardKey": "D",
+      "description": "向右转向"
+    },
+    {
+      "id": "camera-x",
+      "keyboardKey": "MouseX",
+      "description": "视角水平"
+    },
+    {
+      "id": "camera-y",
+      "keyboardKey": "MouseY",
+      "description": "视角垂直"
+    },
+    {
+      "id": "handbrake",
+      "keyboardKey": "Space",
+      "description": "手刹"
+    },
+    {
+      "id": "vehicle-interact",
+      "keyboardKey": "F",
+      "description": "上/下车交互"
+    },
+    {
+      "id": "map",
+      "keyboardKey": "M",
+      "description": "地图"
+    },
+    {
+      "id": "f1",
+      "keyboardKey": "F1",
+      "description": "功能键 F1"
+    },
+    {
+      "id": "f2",
+      "keyboardKey": "F2",
+      "description": "功能键 F2"
+    },
+    {
+      "id": "f3",
+      "keyboardKey": "F3",
+      "description": "功能键 F3"
+    },
+    {
+      "id": "f4",
+      "keyboardKey": "F4",
+      "description": "功能键 F4"
+    },
+    {
+      "id": "f5",
+      "keyboardKey": "F5",
+      "description": "功能键 F5"
+    },
+    {
+      "id": "switch-to-onfoot",
+      "templateToggle": {
+        "alternateProfileId": "onfoot-basic-maxim0191"
+      },
+      "description": "切换到步行模板"
+    }
+  ],
+  "radialMenus": [
+    {
+      "id": "function-keys-wheel",
+      "displayName": "F1-F5",
+      "joystick": "RightStick",
+      "items": [
+        {
+          "actionId": "f1",
+          "label": "F1"
+        },
+        {
+          "actionId": "f2",
+          "label": "F2"
+        },
+        {
+          "actionId": "f3",
+          "label": "F3"
+        },
+        {
+          "actionId": "f4",
+          "label": "F4"
+        },
+        {
+          "actionId": "f5",
+          "label": "F5"
+        }
+      ]
+    },
+    {
+      "id": "mode-wheel",
+      "displayName": "模式切换",
+      "joystick": "RightStick",
+      "items": [
+        {
+          "actionId": "switch-to-onfoot",
+          "label": "切换步行"
+        },
+        {
+          "actionId": "map",
+          "label": "地图"
+        }
+      ]
+    }
+  ],
+  "mappings": [
+    {
+      "from": {
+        "type": "LeftThumbstick",
+        "value": "Up"
+      },
+      "actionId": "drive-accelerate",
+      "trigger": "Pressed",
+      "analogThreshold": 0.25
+    },
+    {
+      "from": {
+        "type": "LeftThumbstick",
+        "value": "Down"
+      },
+      "actionId": "drive-brake-reverse",
+      "trigger": "Pressed",
+      "analogThreshold": 0.25
+    },
+    {
+      "from": {
+        "type": "LeftThumbstick",
+        "value": "Left"
+      },
+      "actionId": "drive-left",
+      "trigger": "Pressed",
+      "analogThreshold": 0.25
+    },
+    {
+      "from": {
+        "type": "LeftThumbstick",
+        "value": "Right"
+      },
+      "actionId": "drive-right",
+      "trigger": "Pressed",
+      "analogThreshold": 0.25
+    },
+    {
+      "from": {
+        "type": "RightThumbstick",
+        "value": "X"
+      },
+      "actionId": "camera-x",
+      "trigger": "Pressed",
+      "analogThreshold": null
+    },
+    {
+      "from": {
+        "type": "RightThumbstick",
+        "value": "Y"
+      },
+      "actionId": "camera-y",
+      "trigger": "Pressed",
+      "analogThreshold": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "A"
+      },
+      "actionId": "handbrake",
+      "trigger": "Pressed",
+      "analogThreshold": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "Y"
+      },
+      "actionId": "vehicle-interact",
+      "trigger": "Pressed",
+      "analogThreshold": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "Start"
+      },
+      "actionId": "map",
+      "trigger": "Pressed",
+      "analogThreshold": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "DPadUp"
+      },
+      "keyboardKey": "",
+      "description": "循环选择上一个（1-9）",
+      "trigger": "Pressed",
+      "analogThreshold": null,
+      "itemCycle": {
+        "direction": "Previous",
+        "slotCount": 9
+      }
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "DPadDown"
+      },
+      "keyboardKey": "",
+      "description": "循环选择下一个（1-9）",
+      "trigger": "Pressed",
+      "analogThreshold": null,
+      "itemCycle": {
+        "direction": "Next",
+        "slotCount": 9
+      }
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "DPadLeft"
+      },
+      "keyboardKey": "",
+      "description": "F1-F5 轮盘",
+      "trigger": "Pressed",
+      "analogThreshold": null,
+      "radialMenu": {
+        "radialMenuId": "function-keys-wheel"
+      }
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "LeftShoulder"
+      },
+      "keyboardKey": "",
+      "description": "模式轮盘",
+      "trigger": "Pressed",
+      "analogThreshold": null,
+      "radialMenu": {
+        "radialMenuId": "mode-wheel"
+      }
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "Back + Start"
+      },
+      "actionId": "switch-to-onfoot",
+      "trigger": "Pressed",
+      "analogThreshold": null
+    }
+  ]
+}
