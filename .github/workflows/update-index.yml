@@ -1,0 +1,35 @@
+name: Update Community Index
+
+on:
+  push:
+    branches: [ main, dev/test-ci ]
+    paths:
+      - '**/*.json'
+      - '.scripts/generate_index.py'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.x'
+
+      - name: Generate Index
+        run: python .scripts/generate_index.py
+
+      - name: Commit and Push Index
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add index.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "docs: auto-update community index [skip ci]" && git push)
