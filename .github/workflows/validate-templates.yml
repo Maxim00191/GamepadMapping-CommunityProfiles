@@ -29,7 +29,20 @@ jobs:
       - name: Forbid manual index.json changes in PR
         if: github.event_name == 'pull_request'
         run: |
-          if git diff --name-only origin/main...HEAD | grep -Fxq "index.json"; then
+          CHANGED_FILES="$(git diff --name-only origin/main...HEAD)"
+
+          # Allow the automation branch to carry index-only updates.
+          if [[ "${{ github.head_ref }}" == "auto/update-index" ]]; then
+            NON_INDEX_CHANGES="$(echo "$CHANGED_FILES" | grep -Fvx "index.json" || true)"
+            if [[ -n "$NON_INDEX_CHANGES" ]]; then
+              echo "ERROR: auto/update-index PR must only change index.json."
+              echo "$NON_INDEX_CHANGES"
+              exit 1
+            fi
+            exit 0
+          fi
+
+          if echo "$CHANGED_FILES" | grep -Fxq "index.json"; then
             echo "ERROR: Do not modify index.json manually."
             echo "index.json is auto-managed after merge."
             exit 1
