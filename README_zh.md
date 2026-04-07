@@ -34,8 +34,9 @@
 3.  将你的映射 JSON 文件放入该文件夹。
     *   请确保 JSON 内部设置了 `displayName` 和 `author` 字段。
     *   文件名建议具有描述性（如 `explore-maxim0191.json`）。
-4.  提交 **Pull Request**。
-5.  PR 合并后，系统会自动更新索引，你的模板将立即出现在应用的社区目录中。
+4.  将你的修改提交至新的branch，名字可以为`<author>/new-<game_name>-template`。如`maxim0191/new-roco-kingdom-template`。
+5.  提交 **Pull Request**。
+6.  PR 合并后，系统会自动更新索引，你的模板将立即出现在应用的社区目录中。
 
 ## 模板文件约定
 

@@ -34,8 +34,9 @@ We welcome contributions! To add a new template:
 3.  Add your mapping JSON file into that folder.
     *   Ensure `displayName` and `author` fields are set inside the JSON.
     *   The filename should ideally be descriptive (e.g., `explore-maxim0191.json`).
-4.  Open a **Pull Request**.
-5.  Once merged, the system will automatically update the index, and your template will appear in the application's community catalog.
+4.  Commit your changes to a new branch, named `<author>/new-<game_name>-template` (for example: `maxim0191/new-roco-kingdom-template`).
+5.  Submit a **Pull Request**.
+6.  Once merged, the system will automatically update the index, and your template will appear in the application's community catalog.
 
 ## Template fields
 
