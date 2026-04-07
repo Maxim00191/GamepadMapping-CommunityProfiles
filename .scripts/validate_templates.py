@@ -325,6 +325,9 @@ def iter_json_files(root: Path) -> list[Path]:
         return [root] if root.suffix.lower() == ".json" else []
     files: list[Path] = []
     for p in sorted(root.rglob("*.json")):
+        # 显式忽略 index.json，因为它是一个数组而不是模板对象
+        if p.name.lower() == "index.json":
+            continue
         parts = {n.lower() for n in p.parts}
         if parts & SKIP_DIR_PARTS_LOWER:
             continue
