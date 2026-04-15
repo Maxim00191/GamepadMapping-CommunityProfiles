@@ -1,6 +1,6 @@
 export interface Env {
   GH_TOKEN: string;
-  /** Required for public workers: clients must send Authorization: Bearer <UPLOAD_API_KEY> */
+  /** Required for public workers: clients send Authorization: Bearer <UPLOAD_API_KEY> and/or X-Custom-Auth-Key */
   UPLOAD_API_KEY?: string;
   /** Defaults below if unset */
   REPO_OWNER?: string;
@@ -88,7 +88,10 @@ export default {
         );
       }
       const auth = request.headers.get("Authorization") ?? "";
-      if (auth !== `Bearer ${uploadKey}`) {
+      const customAuth = (request.headers.get("X-Custom-Auth-Key") ?? "").trim();
+      const bearerOk = auth === `Bearer ${uploadKey}`;
+      const customOk = customAuth.length > 0 && customAuth === uploadKey;
+      if (!bearerOk && !customOk) {
         return jsonResponse(401, { success: false, error: "Unauthorized", phase: "unauthorized" }, request, requestId);
       }
 
@@ -194,7 +197,7 @@ function corsHeaders(request: Request): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Authorization, Content-Type",
+    "Access-Control-Allow-Headers": "Authorization, Content-Type, X-Custom-Auth-Key",
     "Access-Control-Max-Age": "86400",
   };
 }
