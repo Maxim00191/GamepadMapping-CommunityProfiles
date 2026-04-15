@@ -4,7 +4,7 @@
 # Client: Gamepad Mapping app (CommunityTemplateWorkerSubmissionPayload over HTTPS POST + Bearer UPLOAD_API_KEY)
 name = "gamepadmapping-community-upload"
 main = "src/index.ts"
-compatibility_date = "2026-11-01"
+compatibility_date = "2026-01-01"
 
 [vars]
 REPO_OWNER = "Maxim00191"
