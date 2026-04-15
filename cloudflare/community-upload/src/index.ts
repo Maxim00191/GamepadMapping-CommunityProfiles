@@ -1,9 +1,9 @@
 export interface Env {
   GH_TOKEN: string;
-  /** Required for public workers: clients send Authorization: Bearer <UPLOAD_API_KEY> and/or X-Custom-Auth-Key */
-  UPLOAD_API_KEY?: string;
-  /** Optional HMAC key for signed requests; falls back to UPLOAD_API_KEY when omitted. */
-  UPLOAD_SIGNING_KEY?: string;
+  /** Optional Turnstile secret. When set, /ticket requires a valid turnstileToken. */
+  TURNSTILE_SECRET_KEY?: string;
+  /** Optional expected Turnstile action for /ticket (default: "community_upload_ticket"). */
+  TURNSTILE_EXPECTED_ACTION?: string;
   /** Set in wrangler.toml [vars] (or dashboard); must match the client’s community repo settings. */
   REPO_OWNER?: string;
   REPO_NAME?: string;
@@ -12,8 +12,8 @@ export interface Env {
   LIMIT_KV?: KVNamespace;
   /** Max successful uploads per IP per UTC day (default 20). Only if LIMIT_KV is bound. */
   DAILY_UPLOAD_LIMIT?: string;
-  /** Allowed absolute clock skew in seconds for signed requests (default 120). */
-  REQUEST_TIMESTAMP_TOLERANCE_SECONDS?: string;
+  /** Max ticket issues per IP per UTC day (default 60). Only if LIMIT_KV is bound. */
+  DAILY_TICKET_ISSUE_LIMIT?: string;
   /** Lifetime for one-time upload tickets in seconds (default 90). */
   UPLOAD_TICKET_TTL_SECONDS?: string;
 }
@@ -39,34 +39,29 @@ interface Payload {
 interface TicketRequestBody {
   payloadSha256: string;
   submitPath: string;
+  turnstileToken?: string;
 }
 
 interface TicketRecord {
   payloadSha256: string;
   submitPath: string;
+  ticketProof: string;
   expiresAtUnixSeconds: number;
 }
 
 const GITHUB_API = "https://api.github.com/";
 const GITHUB_API_VERSION = "2022-11-28";
+const SUBMIT_ENDPOINT_PATH = "/submit";
+const TICKET_ENDPOINT_PATH = "/ticket";
 const MAX_FILES = 8;
 const MAX_DECODED_BYTES_PER_FILE = 1 * 1024 * 1024;
-const SIGNATURE_VERSION_V1 = "v1";
-const REQUEST_NONCE_TTL_SECONDS = 10 * 60;
-const HEADER_SIGNATURE_VERSION = "X-Community-Signature-Version";
-const HEADER_TIMESTAMP = "X-Community-Timestamp";
-const HEADER_NONCE = "X-Community-Nonce";
-const HEADER_CONTENT_SHA256 = "X-Community-Content-SHA256";
-const HEADER_SIGNATURE = "X-Community-Signature";
+const DEFAULT_DAILY_TICKET_ISSUE_LIMIT = 60;
+const DEFAULT_TURNSTILE_ACTION = "community_upload_ticket";
 const HEADER_TICKET_ID = "X-Community-Ticket-Id";
 const HEADER_TICKET_PROOF = "X-Community-Ticket-Proof";
 const TICKET_ID_TTL_BUFFER_SECONDS = 60;
 const DEFAULT_UPLOAD_TICKET_TTL_SECONDS = 90;
 const MAX_UPLOAD_TICKET_TTL_SECONDS = 300;
-
-interface SignedVerificationResult {
-  contentSha256: string;
-}
 
 type ErrorPhase =
   | "misconfigured"
@@ -99,7 +94,7 @@ class WorkerResponseError extends Error {
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     const requestUrl = new URL(request.url);
-    const path = requestUrl.pathname;
+    const path = normalizeApiPath(requestUrl.pathname);
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: corsHeaders(request) });
     }
@@ -109,32 +104,13 @@ export default {
     }
 
     const requestId = crypto.randomUUID();
+    if (path !== SUBMIT_ENDPOINT_PATH && path !== TICKET_ENDPOINT_PATH) {
+      return jsonResponse(404, { success: false, error: "Unknown endpoint", phase: "validate" }, request, requestId);
+    }
 
     try {
-      const uploadKey = (env.UPLOAD_API_KEY ?? "").trim();
-      if (uploadKey.length === 0) {
-        return jsonResponse(
-          500,
-          { success: false, error: "Server misconfigured (UPLOAD_API_KEY)", phase: "misconfigured" },
-          request,
-          requestId
-        );
-      }
-      const auth = request.headers.get("Authorization") ?? "";
-      const customAuth = (request.headers.get("X-Custom-Auth-Key") ?? "").trim();
-      const bearerOk = auth === `Bearer ${uploadKey}`;
-      const customOk = customAuth.length > 0 && customAuth === uploadKey;
-      if (!bearerOk && !customOk) {
-        return jsonResponse(401, { success: false, error: "Unauthorized", phase: "unauthorized" }, request, requestId);
-      }
-
-      const signed = await verifySignedRequest(request, env, uploadKey);
-      if ("error" in signed) {
-        return jsonResponse(401, { success: false, error: signed.error, phase: "unauthorized" }, request, requestId);
-      }
-
-      if (path.endsWith("/ticket")) {
-        const ticketResult = await issueOneTimeTicket(request, env, uploadKey, signed.contentSha256);
+      if (path === TICKET_ENDPOINT_PATH) {
+        const ticketResult = await issueOneTimeTicket(request, env);
         if ("error" in ticketResult) {
           return jsonResponse(400, { success: false, error: ticketResult.error, phase: "validate" }, request, requestId);
         }
@@ -180,10 +156,7 @@ export default {
 
       if (env.LIMIT_KV) {
         const limit = Math.max(1, parseInt(env.DAILY_UPLOAD_LIMIT ?? "20", 10) || 20);
-        const ip = request.headers.get("CF-Connecting-IP") ?? "unknown";
-        const d = new Date();
-        const day = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
-        const kvKey = `upload:${day}:${ip}`;
+        const kvKey = buildDailyIpKey("upload", request);
         const raw = await env.LIMIT_KV.get(kvKey);
         const count = parseInt(raw ?? "0", 10) || 0;
         if (count >= limit) {
@@ -200,15 +173,18 @@ export default {
         }
       }
 
+      const rawBody = await request.text();
+      const payloadSha256 = await sha256Hex(rawBody);
+
       let body: Payload;
       try {
-        body = (await request.json()) as Payload;
+        body = JSON.parse(rawBody) as Payload;
       } catch {
         return jsonResponse(400, { success: false, error: "Invalid JSON body", phase: "invalid_json" }, request, requestId);
       }
 
       try {
-        const consumeError = await validateAndConsumeTicket(request, env, uploadKey, signed.contentSha256);
+        const consumeError = await validateAndConsumeTicket(request, env, payloadSha256);
         if (consumeError) {
           return jsonResponse(401, { success: false, error: consumeError, phase: "unauthorized" }, request, requestId);
         }
@@ -243,11 +219,7 @@ export default {
       }
 
       if (env.LIMIT_KV) {
-        const limit = Math.max(1, parseInt(env.DAILY_UPLOAD_LIMIT ?? "20", 10) || 20);
-        const ip = request.headers.get("CF-Connecting-IP") ?? "unknown";
-        const d = new Date();
-        const day = `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}-${String(d.getUTCDate()).padStart(2, "0")}`;
-        const kvKey = `upload:${day}:${ip}`;
+        const kvKey = buildDailyIpKey("upload", request);
         const raw = await env.LIMIT_KV.get(kvKey);
         const count = parseInt(raw ?? "0", 10) || 0;
         await env.LIMIT_KV.put(kvKey, String(count + 1), { expirationTtl: 172800 });
@@ -273,94 +245,14 @@ function corsHeaders(request: Request): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": [
-      "Authorization",
-      "Content-Type",
-      "X-Custom-Auth-Key",
-      HEADER_SIGNATURE_VERSION,
-      HEADER_TIMESTAMP,
-      HEADER_NONCE,
-      HEADER_CONTENT_SHA256,
-      HEADER_SIGNATURE,
-      HEADER_TICKET_ID,
-      HEADER_TICKET_PROOF,
-    ].join(", "),
+    "Access-Control-Allow-Headers": ["Content-Type", HEADER_TICKET_ID, HEADER_TICKET_PROOF].join(", "),
     "Access-Control-Max-Age": "86400",
   };
 }
 
-async function verifySignedRequest(
-  request: Request,
-  env: Env,
-  uploadKey: string
-): Promise<SignedVerificationResult | { error: string }> {
-  const version = (request.headers.get(HEADER_SIGNATURE_VERSION) ?? "").trim();
-  const timestampRaw = (request.headers.get(HEADER_TIMESTAMP) ?? "").trim();
-  const nonce = (request.headers.get(HEADER_NONCE) ?? "").trim();
-  const contentSha256 = (request.headers.get(HEADER_CONTENT_SHA256) ?? "").trim().toLowerCase();
-  const signature = (request.headers.get(HEADER_SIGNATURE) ?? "").trim();
-  if (!version || !timestampRaw || !nonce || !contentSha256 || !signature) {
-    return { error: "Missing signed request headers" };
-  }
-  if (version !== SIGNATURE_VERSION_V1) {
-    return { error: "Unsupported signed request version" };
-  }
-
-  const timestamp = Number.parseInt(timestampRaw, 10);
-  if (!Number.isFinite(timestamp) || timestamp <= 0) {
-    return { error: "Invalid signed request timestamp" };
-  }
-  const tolerance = Math.max(30, Number.parseInt(env.REQUEST_TIMESTAMP_TOLERANCE_SECONDS ?? "120", 10) || 120);
-  const skew = Math.abs(Math.floor(Date.now() / 1000) - timestamp);
-  if (skew > tolerance) {
-    return { error: "Signed request has expired" };
-  }
-
-  if (nonce.length < 16 || nonce.length > 128) {
-    return { error: "Invalid signed request nonce" };
-  }
-
-  const requestBody = await request.clone().text();
-  const computedHash = await sha256Hex(requestBody);
-  if (computedHash !== contentSha256) {
-    return { error: "Signed request content hash mismatch" };
-  }
-
-  const signingKey = (env.UPLOAD_SIGNING_KEY ?? uploadKey).trim();
-  if (!signingKey) {
-    return { error: "Server misconfigured (UPLOAD_SIGNING_KEY)" };
-  }
-  const endpoint = new URL(request.url);
-  const canonical = [
-    SIGNATURE_VERSION_V1,
-    request.method.toUpperCase(),
-    `${endpoint.pathname}${endpoint.search}`,
-    String(timestamp),
-    nonce,
-    computedHash,
-  ].join("\n");
-  const expectedSignature = await hmacSha256Base64(signingKey, canonical);
-  if (!timingSafeEqual(signature, expectedSignature)) {
-    return { error: "Signed request signature mismatch" };
-  }
-
-  if (env.LIMIT_KV) {
-    const replayKey = `nonce:${nonce}`;
-    const seen = await env.LIMIT_KV.get(replayKey);
-    if (seen) {
-      return { error: "Signed request was replayed" };
-    }
-    await env.LIMIT_KV.put(replayKey, "1", { expirationTtl: REQUEST_NONCE_TTL_SECONDS });
-  }
-
-  return { contentSha256: computedHash };
-}
-
 async function issueOneTimeTicket(
   request: Request,
-  env: Env,
-  uploadKey: string,
-  contentSha256: string
+  env: Env
 ): Promise<
   | {
       ticketId: string;
@@ -380,6 +272,17 @@ async function issueOneTimeTicket(
     return { error: "Invalid ticket request JSON body" };
   }
 
+  const requesterIp = request.headers.get("CF-Connecting-IP") ?? "unknown";
+  const turnstileError = await verifyTurnstileIfConfigured(env, requesterIp, body.turnstileToken);
+  if (turnstileError) {
+    return { error: turnstileError };
+  }
+
+  const issueLimitError = await enforceTicketIssueRateLimit(request, env);
+  if (issueLimitError) {
+    return { error: issueLimitError };
+  }
+
   const payloadSha256 = (body.payloadSha256 ?? "").trim().toLowerCase();
   if (!/^[0-9a-f]{64}$/.test(payloadSha256)) {
     return { error: "payloadSha256 must be a 64-character SHA-256 hex string" };
@@ -389,8 +292,8 @@ async function issueOneTimeTicket(
   if (!submitPath) {
     return { error: "submitPath must be an absolute path beginning with '/'" };
   }
-  if (submitPath.endsWith("/ticket")) {
-    return { error: "submitPath cannot point to the ticket endpoint" };
+  if (submitPath !== SUBMIT_ENDPOINT_PATH) {
+    return { error: `submitPath must equal '${SUBMIT_ENDPOINT_PATH}'` };
   }
 
   const ticketTtl = Math.min(
@@ -400,24 +303,110 @@ async function issueOneTimeTicket(
   const nowSeconds = Math.floor(Date.now() / 1000);
   const expiresAtUnixSeconds = nowSeconds + ticketTtl;
   const ticketId = crypto.randomUUID().replace(/-/g, "");
-  const signingKey = (env.UPLOAD_SIGNING_KEY ?? uploadKey).trim();
-  const canonical = [ticketId, payloadSha256, submitPath, String(expiresAtUnixSeconds)].join("\n");
-  const ticketProof = await hmacSha256Base64(signingKey, canonical);
+  const ticketProof = crypto.randomUUID().replace(/-/g, "") + crypto.randomUUID().replace(/-/g, "");
 
   const ticketRecord: TicketRecord = {
     payloadSha256,
     submitPath,
+    ticketProof,
     expiresAtUnixSeconds,
   };
   const ttl = ticketTtl + TICKET_ID_TTL_BUFFER_SECONDS;
   await env.LIMIT_KV.put(`ticket:${ticketId}`, JSON.stringify(ticketRecord), { expirationTtl: ttl });
+  await incrementTicketIssueCounter(request, env);
   return { ticketId, ticketProof, expiresAtUnixSeconds };
+}
+
+async function verifyTurnstileIfConfigured(
+  env: Env,
+  requesterIp: string,
+  turnstileToken: string | undefined
+): Promise<string | null> {
+  const secret = (env.TURNSTILE_SECRET_KEY ?? "").trim();
+  if (!secret) {
+    return null;
+  }
+
+  const token = (turnstileToken ?? "").trim();
+  if (!token) {
+    return "Missing turnstileToken";
+  }
+
+  const form = new URLSearchParams();
+  form.set("secret", secret);
+  form.set("response", token);
+  if (requesterIp && requesterIp !== "unknown") {
+    form.set("remoteip", requesterIp);
+  }
+
+  let verification: TurnstileSiteVerifyResponse;
+  try {
+    const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
+      method: "POST",
+      body: form,
+    });
+    verification = (await response.json()) as TurnstileSiteVerifyResponse;
+  } catch {
+    return "Could not verify Turnstile token";
+  }
+
+  if (!verification.success) {
+    return "Turnstile verification failed";
+  }
+
+  const expectedAction = (env.TURNSTILE_EXPECTED_ACTION ?? DEFAULT_TURNSTILE_ACTION).trim();
+  if (expectedAction.length > 0) {
+    const actualAction = (verification.action ?? "").trim();
+    if (actualAction !== expectedAction) {
+      return "Turnstile action mismatch";
+    }
+  }
+
+  return null;
+}
+
+async function enforceTicketIssueRateLimit(request: Request, env: Env): Promise<string | null> {
+  if (!env.LIMIT_KV) {
+    return null;
+  }
+
+  const limit = Math.max(1, Number.parseInt(env.DAILY_TICKET_ISSUE_LIMIT ?? `${DEFAULT_DAILY_TICKET_ISSUE_LIMIT}`, 10) || DEFAULT_DAILY_TICKET_ISSUE_LIMIT);
+  const key = buildDailyIpKey("ticket-issue", request);
+  const raw = await env.LIMIT_KV.get(key);
+  const count = Number.parseInt(raw ?? "0", 10) || 0;
+  if (count >= limit) {
+    return `Daily ticket issuance limit reached (${limit}/day)`;
+  }
+
+  return null;
+}
+
+async function incrementTicketIssueCounter(request: Request, env: Env): Promise<void> {
+  if (!env.LIMIT_KV) {
+    return;
+  }
+
+  const key = buildDailyIpKey("ticket-issue", request);
+  const raw = await env.LIMIT_KV.get(key);
+  const count = Number.parseInt(raw ?? "0", 10) || 0;
+  await env.LIMIT_KV.put(key, String(count + 1), { expirationTtl: 172800 });
+}
+
+function buildDailyIpKey(prefix: string, request: Request): string {
+  const ip = request.headers.get("CF-Connecting-IP") ?? "unknown";
+  const now = new Date();
+  const day = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, "0")}-${String(now.getUTCDate()).padStart(2, "0")}`;
+  return `${prefix}:${day}:${ip}`;
+}
+
+interface TurnstileSiteVerifyResponse {
+  success: boolean;
+  action?: string;
 }
 
 async function validateAndConsumeTicket(
   request: Request,
   env: Env,
-  uploadKey: string,
   contentSha256: string
 ): Promise<string | null> {
   if (!env.LIMIT_KV) {
@@ -457,10 +446,7 @@ async function validateAndConsumeTicket(
     return "Upload ticket endpoint mismatch";
   }
 
-  const signingKey = (env.UPLOAD_SIGNING_KEY ?? uploadKey).trim();
-  const canonical = [ticketId, ticket.payloadSha256, ticket.submitPath, String(ticket.expiresAtUnixSeconds)].join("\n");
-  const expectedProof = await hmacSha256Base64(signingKey, canonical);
-  if (!timingSafeEqual(ticketProof, expectedProof)) {
+  if (!timingSafeEqual(ticketProof, ticket.ticketProof)) {
     return "Upload ticket proof mismatch";
   }
 
@@ -472,7 +458,15 @@ function normalizeSubmitPath(raw: string | undefined): string {
   const s = (raw ?? "").trim();
   if (!s.startsWith("/")) return "";
   if (s.includes("://")) return "";
-  return s;
+  return normalizeApiPath(s);
+}
+
+function normalizeApiPath(pathname: string): string {
+  if (!pathname) return "/";
+  if (pathname.length > 1 && pathname.endsWith("/")) {
+    return pathname.slice(0, -1);
+  }
+  return pathname;
 }
 
 async function sha256Hex(input: string): Promise<string> {
@@ -481,23 +475,10 @@ async function sha256Hex(input: string): Promise<string> {
   return bytesToHex(new Uint8Array(digest));
 }
 
-async function hmacSha256Base64(key: string, payload: string): Promise<string> {
-  const keyData = new TextEncoder().encode(key);
-  const cryptoKey = await crypto.subtle.importKey("raw", keyData, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
-  const sig = await crypto.subtle.sign("HMAC", cryptoKey, new TextEncoder().encode(payload));
-  return bytesToBase64(new Uint8Array(sig));
-}
-
 function bytesToHex(bytes: Uint8Array): string {
   let out = "";
   for (const b of bytes) out += b.toString(16).padStart(2, "0");
   return out;
-}
-
-function bytesToBase64(bytes: Uint8Array): string {
-  let binary = "";
-  for (const b of bytes) binary += String.fromCharCode(b);
-  return btoa(binary);
 }
 
 function timingSafeEqual(a: string, b: string): boolean {
