@@ -1,0 +1,49 @@
+name: Deploy community upload Worker
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "cloudflare/community-upload/**"
+      - ".github/workflows/deploy-community-upload-worker.yml"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-community-upload-worker
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: cloudflare/community-upload/package-lock.json
+
+      - name: Install and typecheck
+        working-directory: cloudflare/community-upload
+        run: |
+          npm ci
+          npm run typecheck
+
+      - name: Deploy to Cloudflare Workers
+        working-directory: cloudflare/community-upload
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -e
+          if [ -z "${CLOUDFLARE_API_TOKEN:-}" ]; then
+            echo "Missing repository secret CLOUDFLARE_API_TOKEN."
+            exit 1
+          fi
+          if [ -n "${CLOUDFLARE_ACCOUNT_ID:-}" ]; then
+            export CLOUDFLARE_ACCOUNT_ID
+          fi
+          npx wrangler deploy

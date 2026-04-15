@@ -2,7 +2,7 @@ export interface Env {
   GH_TOKEN: string;
   /** Required for public workers: clients send Authorization: Bearer <UPLOAD_API_KEY> and/or X-Custom-Auth-Key */
   UPLOAD_API_KEY?: string;
-  /** Defaults below if unset */
+  /** Set in wrangler.toml [vars] (or dashboard); must match the client’s community repo settings. */
   REPO_OWNER?: string;
   REPO_NAME?: string;
   BASE_BRANCH?: string;
@@ -34,10 +34,6 @@ const GITHUB_API = "https://api.github.com/";
 const GITHUB_API_VERSION = "2022-11-28";
 const MAX_FILES = 48;
 const MAX_DECODED_BYTES_PER_FILE = 4 * 1024 * 1024;
-
-const DEFAULT_OWNER = "Maxim00191";
-const DEFAULT_REPO = "GamepadMapping-CommunityProfiles";
-const DEFAULT_BRANCH = "main";
 
 type ErrorPhase =
   | "misconfigured"
@@ -105,9 +101,21 @@ export default {
         );
       }
 
-      const owner = (env.REPO_OWNER ?? DEFAULT_OWNER).trim();
-      const repo = (env.REPO_NAME ?? DEFAULT_REPO).trim();
-      const baseBranch = (env.BASE_BRANCH ?? DEFAULT_BRANCH).trim();
+      const owner = (env.REPO_OWNER ?? "").trim();
+      const repo = (env.REPO_NAME ?? "").trim();
+      const baseBranch = (env.BASE_BRANCH ?? "").trim();
+      if (!owner || !repo || !baseBranch) {
+        return jsonResponse(
+          500,
+          {
+            success: false,
+            error: "Server misconfigured (REPO_OWNER / REPO_NAME / BASE_BRANCH)",
+            phase: "misconfigured",
+          },
+          request,
+          requestId
+        );
+      }
 
       if (env.LIMIT_KV) {
         const limit = Math.max(1, parseInt(env.DAILY_UPLOAD_LIMIT ?? "20", 10) || 20);
