@@ -15,3 +15,7 @@ DAILY_UPLOAD_LIMIT = "3"
 DAILY_TICKET_ISSUE_LIMIT = "30"
 UPLOAD_TICKET_TTL_SECONDS = "90"
 TURNSTILE_EXPECTED_ACTION = "community_upload_ticket"
+
+[[kv_namespaces]]
+binding = "LIMIT_KV"
+id = "9872ea6d40454f3784d9b7a4978e26eb"
