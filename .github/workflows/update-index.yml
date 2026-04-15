@@ -3,9 +3,8 @@ name: Update Community Index
 on:
   push:
     branches: [main]
-    paths:
-      - '**/*.json'
-      - '.scripts/generate_index.py'
+  schedule:
+    - cron: '23 * * * *'
   workflow_dispatch:
 
 jobs:
