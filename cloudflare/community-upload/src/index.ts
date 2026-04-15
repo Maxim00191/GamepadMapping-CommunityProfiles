@@ -33,7 +33,7 @@ interface Payload {
 const GITHUB_API = "https://api.github.com/";
 const GITHUB_API_VERSION = "2022-11-28";
 const MAX_FILES = 8;
-const MAX_DECODED_BYTES_PER_FILE = 4 * 1024 * 1024;
+const MAX_DECODED_BYTES_PER_FILE = 1 * 1024 * 1024;
 
 type ErrorPhase =
   | "misconfigured"
