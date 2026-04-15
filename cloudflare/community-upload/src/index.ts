@@ -384,9 +384,6 @@ async function issueOneTimeTicket(
   if (!/^[0-9a-f]{64}$/.test(payloadSha256)) {
     return { error: "payloadSha256 must be a 64-character SHA-256 hex string" };
   }
-  if (!timingSafeEqual(payloadSha256, contentSha256)) {
-    return { error: "Ticket payload hash does not match signed content hash" };
-  }
 
   const submitPath = normalizeSubmitPath(body.submitPath);
   if (!submitPath) {
