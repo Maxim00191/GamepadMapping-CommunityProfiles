@@ -27,6 +27,15 @@
     "downloadUrl": "https://raw.githubusercontent.com/Maxim00191/GamepadMapping-CommunityProfiles/main/Elden Ring - test/test/default.json"
   },
   {
+    "id": "flight_sim",
+    "displayName": "飞行模拟（示例）",
+    "author": "test",
+    "description": "test",
+    "catalogFolder": "Flight Sim - test/test",
+    "fileName": "flight_sim.json",
+    "downloadUrl": "https://raw.githubusercontent.com/Maxim00191/GamepadMapping-CommunityProfiles/main/Flight Sim - test/test/flight_sim.json"
+  },
+  {
     "id": "explore-maxim0191",
     "displayName": "洛克王国世界·探索 - maxim0191",
     "author": "Maxim0191",
