@@ -32,13 +32,14 @@ interface Payload {
 
 const GITHUB_API = "https://api.github.com/";
 const GITHUB_API_VERSION = "2022-11-28";
-const MAX_FILES = 48;
+const MAX_FILES = 8;
 const MAX_DECODED_BYTES_PER_FILE = 4 * 1024 * 1024;
 
 type ErrorPhase =
   | "misconfigured"
   | "unauthorized"
   | "rate_limited"
+  | "pipeline_busy"
   | "method_not_allowed"
   | "invalid_json"
   | "validate"
@@ -54,7 +55,8 @@ class WorkerResponseError extends Error {
     readonly phase: ErrorPhase,
     message: string,
     readonly detail?: string,
-    readonly github?: { status: number; message?: string; errors?: unknown }
+    readonly github?: { status: number; message?: string; errors?: unknown },
+    readonly code?: string
   ) {
     super(message);
     this.name = "WorkerResponseError";
@@ -155,6 +157,7 @@ export default {
 
       let prUrl: string;
       try {
+        await ensurePipelineIsIdle(token, owner, repo, baseBranch);
         prUrl = await submitPullRequest(token, body, owner, repo, baseBranch);
       } catch (e) {
         if (e instanceof WorkerResponseError) {
@@ -165,6 +168,7 @@ export default {
               error: e.message,
               phase: e.phase,
               ...(e.detail ? { detail: e.detail } : {}),
+              ...(e.code ? { code: e.code } : {}),
               ...(e.github ? { github: e.github } : {}),
             },
             request,
@@ -262,6 +266,9 @@ function validatePayloadAgainstPinnedRepo(body: Payload, owner: string, repo: st
   for (const f of files) {
     const rel = normalizeRelativePath(f.relativePath);
     if (!rel.startsWith(prefix)) throw new Error(`Invalid relativePath: ${f.relativePath}`);
+    if (!rel.toLowerCase().endsWith(".json")) {
+      throw new Error(`Only .json files are allowed: ${f.relativePath}`);
+    }
     if (!f.contentBase64 || typeof f.contentBase64 !== "string") throw new Error("Each file needs contentBase64");
     let bytes: Uint8Array;
     try {
@@ -360,6 +367,81 @@ async function submitPullRequest(
   const prBody = buildPrBody(catalogFolder, profileIds, desc);
   const title = `Community templates: ${gameSeg} (${authorSeg})`;
   return await createPullRequest(token, owner, repo, safeBranch, baseBranch, title, prBody);
+}
+
+async function ensurePipelineIsIdle(token: string, owner: string, repo: string, baseBranch: string): Promise<void> {
+  const runs = await listActiveWorkflowRuns(token, owner, repo, baseBranch, "in_progress");
+  if (runs.length > 0) {
+    throw new WorkerResponseError(
+      409,
+      "pipeline_busy",
+      "Repository CI is currently processing another run. Please retry later.",
+      formatBusyPipelineDetail(runs),
+      undefined,
+      "pipeline_busy"
+    );
+  }
+
+  const queuedRuns = await listActiveWorkflowRuns(token, owner, repo, baseBranch, "queued");
+  if (queuedRuns.length > 0) {
+    throw new WorkerResponseError(
+      409,
+      "pipeline_busy",
+      "Repository CI queue is currently busy. Please retry later.",
+      formatBusyPipelineDetail(queuedRuns),
+      undefined,
+      "pipeline_busy"
+    );
+  }
+}
+
+interface WorkflowRunSummary {
+  id?: number;
+  name?: string;
+  status?: string;
+  html_url?: string;
+}
+
+async function listActiveWorkflowRuns(
+  token: string,
+  owner: string,
+  repo: string,
+  baseBranch: string,
+  status: "queued" | "in_progress"
+): Promise<WorkflowRunSummary[]> {
+  const path =
+    `repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/actions/runs`
+    + `?branch=${encodeURIComponent(baseBranch)}`
+    + `&status=${encodeURIComponent(status)}`
+    + "&per_page=10";
+  const res = await gh(token, "GET", path);
+  const text = await res.text();
+  if (!res.ok) {
+    const ge = parseGithubErrorPayload(text);
+    throw new WorkerResponseError(
+      502,
+      "pipeline_busy",
+      `Could not check CI status (GitHub HTTP ${res.status}).`,
+      ge.message,
+      { status: res.status, message: ge.message, errors: ge.errors },
+      "pipeline_status_check_failed"
+    );
+  }
+
+  const data = JSON.parse(text) as { workflow_runs?: WorkflowRunSummary[] };
+  return data.workflow_runs ?? [];
+}
+
+function formatBusyPipelineDetail(runs: WorkflowRunSummary[]): string {
+  const first = runs[0];
+  if (!first) return "A workflow run is active.";
+  const id = typeof first.id === "number" ? `#${first.id}` : "(unknown id)";
+  const name = (first.name ?? "workflow").trim();
+  const status = (first.status ?? "unknown").trim();
+  const url = (first.html_url ?? "").trim();
+  return url.length > 0
+    ? `Active run: ${name} ${id} [${status}] ${url}`
+    : `Active run: ${name} ${id} [${status}]`;
 }
 
 async function getBranchHeadSha(token: string, owner: string, repo: string, branch: string): Promise<string> {
