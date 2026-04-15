@@ -1,0 +1,12 @@
+{
+  "name": "gamepadmapping-community-upload",
+  "private": true,
+  "scripts": {
+    "deploy": "wrangler deploy"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250415.0",
+    "wrangler": "^4.0.0",
+    "typescript": "^5.6.0"
+  }
+}

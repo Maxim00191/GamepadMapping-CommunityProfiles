@@ -40,6 +40,8 @@ SKIP_DIR_PARTS_LOWER = frozenset(
         "__pycache__",
         ".venv",
         "venv",
+        "cloudflare",
+        ".wrangler",
     }
 )
 
@@ -52,22 +54,31 @@ def is_valid_id(value: str | None) -> bool:
     return bool(VALID_ID_PATTERN.match(str(value).strip()))
 
 
+def _validate_single_catalog_segment(s: str) -> list[str]:
+    errors: list[str] = []
+    if s in (".", ".."):
+        errors.append("templateCatalogFolder segment cannot be '.' or '..'.")
+        return errors
+    if "/" in s or "\\" in s:
+        errors.append("Each templateCatalogFolder path segment must be a single name.")
+        return errors
+    invalid = set('<>:"|?*')
+    if any(c in invalid for c in s) or any(ord(c) < 32 for c in s):
+        errors.append("templateCatalogFolder contains invalid characters.")
+    return errors
+
+
 def validate_catalog_folder(raw: str | None) -> list[str]:
-    """Mirror TemplateStorageKey.ValidateSingleSegmentFolderForSave."""
+    """Mirror TemplateStorageKey.ValidateCatalogFolderPathForSave (multi-segment)."""
     errors: list[str] = []
     s = (raw or "").strip()
     if not s:
         return errors
-    if "/" in s or "\\" in s:
-        errors.append(
-            "templateCatalogFolder must be a single name (no path separators)."
-        )
-    if s in (".", ".."):
-        errors.append("templateCatalogFolder cannot be '.' or '..'.")
-    invalid = set('<>:"|?*')
-    if any(c in invalid for c in s) or any(ord(c) < 32 for c in s):
-        # Windows invalid filename chars subset; keep message generic
-        errors.append("templateCatalogFolder contains invalid characters.")
+    parts = [p for p in s.replace("\\", "/").split("/") if p.strip()]
+    if not parts:
+        return errors
+    for seg in parts:
+        errors.extend(_validate_single_catalog_segment(seg))
     return errors
 
 
