@@ -2,7 +2,8 @@
 # Secrets (wrangler secret put): GH_TOKEN, UPLOAD_API_KEY
 # Optional bindings: LIMIT_KV; optional vars: DAILY_UPLOAD_LIMIT
 # Client: Gamepad Mapping app (CommunityTemplateWorkerSubmissionPayload over HTTPS POST + Bearer UPLOAD_API_KEY)
-name = "gamepadmapping-community-upload"
+# Worker name must match the existing workers.dev host (see communityProfilesUploadWorkerUrl in Gamepad Mapping defaults).
+name = "gamepad-mapping-template-community-repo"
 main = "src/index.ts"
 compatibility_date = "2026-01-01"
 
