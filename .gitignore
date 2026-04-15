@@ -1,2 +1,3 @@
 cloudflare/community-upload/node_modules/
 cloudflare/community-upload/.wrangler/
+cloudflare/community-upload/UPLOAD_SIGNING_KEY.txt

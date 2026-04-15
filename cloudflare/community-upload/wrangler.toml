@@ -1,7 +1,7 @@
 # Bundle submission API (schemaVersion + files[]). Deploy with: wrangler deploy
-# Secrets (wrangler secret put): GH_TOKEN, UPLOAD_API_KEY
-# Optional bindings: LIMIT_KV; optional vars: DAILY_UPLOAD_LIMIT
-# Client: Gamepad Mapping app (CommunityTemplateWorkerSubmissionPayload over HTTPS POST + Bearer UPLOAD_API_KEY)
+# Secrets (wrangler secret put): GH_TOKEN, UPLOAD_API_KEY, optionally UPLOAD_SIGNING_KEY
+# Optional bindings: LIMIT_KV; optional vars: DAILY_UPLOAD_LIMIT, REQUEST_TIMESTAMP_TOLERANCE_SECONDS, UPLOAD_TICKET_TTL_SECONDS
+# Client: Gamepad Mapping app (/ticket + /submit with signed headers + one-time ticket + Bearer UPLOAD_API_KEY)
 # Worker name must match the existing workers.dev host (see communityProfilesUploadWorkerUrl in Gamepad Mapping defaults).
 name = "gamepad-mapping-template-community-repo"
 main = "src/index.ts"
@@ -12,3 +12,5 @@ REPO_OWNER = "Maxim00191"
 REPO_NAME = "GamepadMapping-CommunityProfiles"
 BASE_BRANCH = "main"
 DAILY_UPLOAD_LIMIT = "3"
+REQUEST_TIMESTAMP_TOLERANCE_SECONDS = "120"
+UPLOAD_TICKET_TTL_SECONDS = "90"

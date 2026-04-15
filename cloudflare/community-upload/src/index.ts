@@ -2,6 +2,8 @@ export interface Env {
   GH_TOKEN: string;
   /** Required for public workers: clients send Authorization: Bearer <UPLOAD_API_KEY> and/or X-Custom-Auth-Key */
   UPLOAD_API_KEY?: string;
+  /** Optional HMAC key for signed requests; falls back to UPLOAD_API_KEY when omitted. */
+  UPLOAD_SIGNING_KEY?: string;
   /** Set in wrangler.toml [vars] (or dashboard); must match the client’s community repo settings. */
   REPO_OWNER?: string;
   REPO_NAME?: string;
@@ -10,6 +12,10 @@ export interface Env {
   LIMIT_KV?: KVNamespace;
   /** Max successful uploads per IP per UTC day (default 20). Only if LIMIT_KV is bound. */
   DAILY_UPLOAD_LIMIT?: string;
+  /** Allowed absolute clock skew in seconds for signed requests (default 120). */
+  REQUEST_TIMESTAMP_TOLERANCE_SECONDS?: string;
+  /** Lifetime for one-time upload tickets in seconds (default 90). */
+  UPLOAD_TICKET_TTL_SECONDS?: string;
 }
 
 interface SubmissionFile {
@@ -30,10 +36,37 @@ interface Payload {
   files: SubmissionFile[];
 }
 
+interface TicketRequestBody {
+  payloadSha256: string;
+  submitPath: string;
+}
+
+interface TicketRecord {
+  payloadSha256: string;
+  submitPath: string;
+  expiresAtUnixSeconds: number;
+}
+
 const GITHUB_API = "https://api.github.com/";
 const GITHUB_API_VERSION = "2022-11-28";
 const MAX_FILES = 8;
 const MAX_DECODED_BYTES_PER_FILE = 1 * 1024 * 1024;
+const SIGNATURE_VERSION_V1 = "v1";
+const REQUEST_NONCE_TTL_SECONDS = 10 * 60;
+const HEADER_SIGNATURE_VERSION = "X-Community-Signature-Version";
+const HEADER_TIMESTAMP = "X-Community-Timestamp";
+const HEADER_NONCE = "X-Community-Nonce";
+const HEADER_CONTENT_SHA256 = "X-Community-Content-SHA256";
+const HEADER_SIGNATURE = "X-Community-Signature";
+const HEADER_TICKET_ID = "X-Community-Ticket-Id";
+const HEADER_TICKET_PROOF = "X-Community-Ticket-Proof";
+const TICKET_ID_TTL_BUFFER_SECONDS = 60;
+const DEFAULT_UPLOAD_TICKET_TTL_SECONDS = 90;
+const MAX_UPLOAD_TICKET_TTL_SECONDS = 300;
+
+interface SignedVerificationResult {
+  contentSha256: string;
+}
 
 type ErrorPhase =
   | "misconfigured"
@@ -65,6 +98,8 @@ class WorkerResponseError extends Error {
 
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
+    const requestUrl = new URL(request.url);
+    const path = requestUrl.pathname;
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: corsHeaders(request) });
     }
@@ -91,6 +126,30 @@ export default {
       const customOk = customAuth.length > 0 && customAuth === uploadKey;
       if (!bearerOk && !customOk) {
         return jsonResponse(401, { success: false, error: "Unauthorized", phase: "unauthorized" }, request, requestId);
+      }
+
+      const signed = await verifySignedRequest(request, env, uploadKey);
+      if ("error" in signed) {
+        return jsonResponse(401, { success: false, error: signed.error, phase: "unauthorized" }, request, requestId);
+      }
+
+      if (path.endsWith("/ticket")) {
+        const ticketResult = await issueOneTimeTicket(request, env, uploadKey, signed.contentSha256);
+        if ("error" in ticketResult) {
+          return jsonResponse(400, { success: false, error: ticketResult.error, phase: "validate" }, request, requestId);
+        }
+
+        return jsonResponse(
+          200,
+          {
+            success: true,
+            ticketId: ticketResult.ticketId,
+            ticketProof: ticketResult.ticketProof,
+            expiresAtUnixSeconds: ticketResult.expiresAtUnixSeconds,
+          },
+          request,
+          requestId
+        );
       }
 
       const token = (env.GH_TOKEN ?? "").trim();
@@ -149,6 +208,11 @@ export default {
       }
 
       try {
+        const consumeError = await validateAndConsumeTicket(request, env, uploadKey, signed.contentSha256);
+        if (consumeError) {
+          return jsonResponse(401, { success: false, error: consumeError, phase: "unauthorized" }, request, requestId);
+        }
+
         validatePayloadAgainstPinnedRepo(body, owner, repo, baseBranch);
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
@@ -209,9 +273,241 @@ function corsHeaders(request: Request): Record<string, string> {
   return {
     "Access-Control-Allow-Origin": origin,
     "Access-Control-Allow-Methods": "POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Authorization, Content-Type, X-Custom-Auth-Key",
+    "Access-Control-Allow-Headers": [
+      "Authorization",
+      "Content-Type",
+      "X-Custom-Auth-Key",
+      HEADER_SIGNATURE_VERSION,
+      HEADER_TIMESTAMP,
+      HEADER_NONCE,
+      HEADER_CONTENT_SHA256,
+      HEADER_SIGNATURE,
+      HEADER_TICKET_ID,
+      HEADER_TICKET_PROOF,
+    ].join(", "),
     "Access-Control-Max-Age": "86400",
   };
+}
+
+async function verifySignedRequest(
+  request: Request,
+  env: Env,
+  uploadKey: string
+): Promise<SignedVerificationResult | { error: string }> {
+  const version = (request.headers.get(HEADER_SIGNATURE_VERSION) ?? "").trim();
+  const timestampRaw = (request.headers.get(HEADER_TIMESTAMP) ?? "").trim();
+  const nonce = (request.headers.get(HEADER_NONCE) ?? "").trim();
+  const contentSha256 = (request.headers.get(HEADER_CONTENT_SHA256) ?? "").trim().toLowerCase();
+  const signature = (request.headers.get(HEADER_SIGNATURE) ?? "").trim();
+  if (!version || !timestampRaw || !nonce || !contentSha256 || !signature) {
+    return { error: "Missing signed request headers" };
+  }
+  if (version !== SIGNATURE_VERSION_V1) {
+    return { error: "Unsupported signed request version" };
+  }
+
+  const timestamp = Number.parseInt(timestampRaw, 10);
+  if (!Number.isFinite(timestamp) || timestamp <= 0) {
+    return { error: "Invalid signed request timestamp" };
+  }
+  const tolerance = Math.max(30, Number.parseInt(env.REQUEST_TIMESTAMP_TOLERANCE_SECONDS ?? "120", 10) || 120);
+  const skew = Math.abs(Math.floor(Date.now() / 1000) - timestamp);
+  if (skew > tolerance) {
+    return { error: "Signed request has expired" };
+  }
+
+  if (nonce.length < 16 || nonce.length > 128) {
+    return { error: "Invalid signed request nonce" };
+  }
+
+  const requestBody = await request.clone().text();
+  const computedHash = await sha256Hex(requestBody);
+  if (computedHash !== contentSha256) {
+    return { error: "Signed request content hash mismatch" };
+  }
+
+  const signingKey = (env.UPLOAD_SIGNING_KEY ?? uploadKey).trim();
+  if (!signingKey) {
+    return { error: "Server misconfigured (UPLOAD_SIGNING_KEY)" };
+  }
+  const endpoint = new URL(request.url);
+  const canonical = [
+    SIGNATURE_VERSION_V1,
+    request.method.toUpperCase(),
+    `${endpoint.pathname}${endpoint.search}`,
+    String(timestamp),
+    nonce,
+    computedHash,
+  ].join("\n");
+  const expectedSignature = await hmacSha256Base64(signingKey, canonical);
+  if (!timingSafeEqual(signature, expectedSignature)) {
+    return { error: "Signed request signature mismatch" };
+  }
+
+  if (env.LIMIT_KV) {
+    const replayKey = `nonce:${nonce}`;
+    const seen = await env.LIMIT_KV.get(replayKey);
+    if (seen) {
+      return { error: "Signed request was replayed" };
+    }
+    await env.LIMIT_KV.put(replayKey, "1", { expirationTtl: REQUEST_NONCE_TTL_SECONDS });
+  }
+
+  return { contentSha256: computedHash };
+}
+
+async function issueOneTimeTicket(
+  request: Request,
+  env: Env,
+  uploadKey: string,
+  contentSha256: string
+): Promise<
+  | {
+      ticketId: string;
+      ticketProof: string;
+      expiresAtUnixSeconds: number;
+    }
+  | { error: string }
+> {
+  if (!env.LIMIT_KV) {
+    return { error: "Server misconfigured (LIMIT_KV is required for one-time tickets)" };
+  }
+
+  let body: TicketRequestBody;
+  try {
+    body = (await request.clone().json()) as TicketRequestBody;
+  } catch {
+    return { error: "Invalid ticket request JSON body" };
+  }
+
+  const payloadSha256 = (body.payloadSha256 ?? "").trim().toLowerCase();
+  if (!/^[0-9a-f]{64}$/.test(payloadSha256)) {
+    return { error: "payloadSha256 must be a 64-character SHA-256 hex string" };
+  }
+  if (!timingSafeEqual(payloadSha256, contentSha256)) {
+    return { error: "Ticket payload hash does not match signed content hash" };
+  }
+
+  const submitPath = normalizeSubmitPath(body.submitPath);
+  if (!submitPath) {
+    return { error: "submitPath must be an absolute path beginning with '/'" };
+  }
+  if (submitPath.endsWith("/ticket")) {
+    return { error: "submitPath cannot point to the ticket endpoint" };
+  }
+
+  const ticketTtl = Math.min(
+    MAX_UPLOAD_TICKET_TTL_SECONDS,
+    Math.max(30, Number.parseInt(env.UPLOAD_TICKET_TTL_SECONDS ?? `${DEFAULT_UPLOAD_TICKET_TTL_SECONDS}`, 10) || DEFAULT_UPLOAD_TICKET_TTL_SECONDS)
+  );
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  const expiresAtUnixSeconds = nowSeconds + ticketTtl;
+  const ticketId = crypto.randomUUID().replace(/-/g, "");
+  const signingKey = (env.UPLOAD_SIGNING_KEY ?? uploadKey).trim();
+  const canonical = [ticketId, payloadSha256, submitPath, String(expiresAtUnixSeconds)].join("\n");
+  const ticketProof = await hmacSha256Base64(signingKey, canonical);
+
+  const ticketRecord: TicketRecord = {
+    payloadSha256,
+    submitPath,
+    expiresAtUnixSeconds,
+  };
+  const ttl = ticketTtl + TICKET_ID_TTL_BUFFER_SECONDS;
+  await env.LIMIT_KV.put(`ticket:${ticketId}`, JSON.stringify(ticketRecord), { expirationTtl: ttl });
+  return { ticketId, ticketProof, expiresAtUnixSeconds };
+}
+
+async function validateAndConsumeTicket(
+  request: Request,
+  env: Env,
+  uploadKey: string,
+  contentSha256: string
+): Promise<string | null> {
+  if (!env.LIMIT_KV) {
+    return "Server misconfigured (LIMIT_KV is required for one-time tickets)";
+  }
+
+  const ticketId = (request.headers.get(HEADER_TICKET_ID) ?? "").trim();
+  const ticketProof = (request.headers.get(HEADER_TICKET_PROOF) ?? "").trim();
+  if (!ticketId || !ticketProof) {
+    return "Missing one-time upload ticket headers";
+  }
+
+  const ticketKey = `ticket:${ticketId}`;
+  const ticketRaw = await env.LIMIT_KV.get(ticketKey);
+  if (!ticketRaw) {
+    return "Upload ticket is invalid or expired";
+  }
+
+  let ticket: TicketRecord;
+  try {
+    ticket = JSON.parse(ticketRaw) as TicketRecord;
+  } catch {
+    return "Upload ticket payload is invalid";
+  }
+
+  const nowSeconds = Math.floor(Date.now() / 1000);
+  if (ticket.expiresAtUnixSeconds <= nowSeconds) {
+    await env.LIMIT_KV.delete(ticketKey);
+    return "Upload ticket has expired";
+  }
+
+  const requestPath = `${new URL(request.url).pathname}${new URL(request.url).search}`;
+  if (!timingSafeEqual(ticket.payloadSha256, contentSha256)) {
+    return "Upload ticket payload mismatch";
+  }
+  if (requestPath !== ticket.submitPath) {
+    return "Upload ticket endpoint mismatch";
+  }
+
+  const signingKey = (env.UPLOAD_SIGNING_KEY ?? uploadKey).trim();
+  const canonical = [ticketId, ticket.payloadSha256, ticket.submitPath, String(ticket.expiresAtUnixSeconds)].join("\n");
+  const expectedProof = await hmacSha256Base64(signingKey, canonical);
+  if (!timingSafeEqual(ticketProof, expectedProof)) {
+    return "Upload ticket proof mismatch";
+  }
+
+  await env.LIMIT_KV.delete(ticketKey);
+  return null;
+}
+
+function normalizeSubmitPath(raw: string | undefined): string {
+  const s = (raw ?? "").trim();
+  if (!s.startsWith("/")) return "";
+  if (s.includes("://")) return "";
+  return s;
+}
+
+async function sha256Hex(input: string): Promise<string> {
+  const bytes = new TextEncoder().encode(input);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return bytesToHex(new Uint8Array(digest));
+}
+
+async function hmacSha256Base64(key: string, payload: string): Promise<string> {
+  const keyData = new TextEncoder().encode(key);
+  const cryptoKey = await crypto.subtle.importKey("raw", keyData, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const sig = await crypto.subtle.sign("HMAC", cryptoKey, new TextEncoder().encode(payload));
+  return bytesToBase64(new Uint8Array(sig));
+}
+
+function bytesToHex(bytes: Uint8Array): string {
+  let out = "";
+  for (const b of bytes) out += b.toString(16).padStart(2, "0");
+  return out;
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  for (const b of bytes) binary += String.fromCharCode(b);
+  return btoa(binary);
+}
+
+function timingSafeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
 }
 
 function jsonResponse(status: number, obj: Record<string, unknown>, request: Request, requestId: string): Response {
