@@ -44,7 +44,7 @@ jobs:
           git push -f origin "$BRANCH"
 
           if gh pr list --state open --head "$BRANCH" --base main --json number --jq 'length > 0' | grep -q true; then
-            echo "PR for index update already exists, skipping creation."
+            echo "PR for index update already exists; branch was updated."
           else
             if gh pr create \
               --base main \
@@ -56,5 +56,6 @@ jobs:
               echo "Auto PR creation is blocked by repository policy for GitHub Actions."
               echo "Please enable: Settings > Actions > General > Workflow permissions > Allow GitHub Actions to create and approve pull requests."
               echo "Or create PR manually: https://github.com/${{ github.repository }}/pull/new/$BRANCH"
+              exit 1
             fi
           fi
