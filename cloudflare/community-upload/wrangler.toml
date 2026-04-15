@@ -2,7 +2,7 @@
 # Secrets (wrangler secret put): GH_TOKEN, TURNSTILE_SECRET_KEY (required for production /ticket)
 # Local dev without Turnstile: set var ALLOW_TICKET_WITHOUT_TURNSTILE=true (never in production).
 # Optional bindings: LIMIT_KV; optional vars: DAILY_UPLOAD_LIMIT, DAILY_TICKET_ISSUE_LIMIT, UPLOAD_TICKET_TTL_SECONDS, TURNSTILE_EXPECTED_ACTION
-# Client: Gamepad Mapping app (/ticket + /submit with one-time ticket proof headers; include turnstileToken when Turnstile is enabled)
+# Client: Gamepad Mapping app — GET /turnstile-embed (WebView2), POST /ticket + /submit (ticket headers; turnstileToken when enabled)
 # Worker name must match the existing workers.dev host (see communityProfilesUploadWorkerUrl in Gamepad Mapping defaults).
 name = "gamepad-mapping-template-community-repo"
 main = "src/index.ts"

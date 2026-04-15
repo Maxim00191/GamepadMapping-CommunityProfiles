@@ -55,6 +55,8 @@ const GITHUB_API = "https://api.github.com/";
 const GITHUB_API_VERSION = "2022-11-28";
 const SUBMIT_ENDPOINT_PATH = "/submit";
 const TICKET_ENDPOINT_PATH = "/ticket";
+/** GET: HTML shell for WebView2; hostname must be allowed in Turnstile (same as this Worker). */
+const TURNSTILE_EMBED_PATH = "/turnstile-embed";
 const MAX_FILES = 8;
 const MAX_DECODED_BYTES_PER_FILE = 1 * 1024 * 1024;
 const DEFAULT_DAILY_TICKET_ISSUE_LIMIT = 60;
@@ -101,11 +103,15 @@ export default {
       return new Response(null, { status: 204, headers: corsHeaders(request) });
     }
 
-    if (request.method !== "POST") {
-      return jsonResponse(405, { success: false, error: "Method not allowed", phase: "method_not_allowed" }, request, crypto.randomUUID());
+    const requestId = crypto.randomUUID();
+    if (path === TURNSTILE_EMBED_PATH && request.method === "GET") {
+      return turnstileEmbedHtmlResponse(request);
     }
 
-    const requestId = crypto.randomUUID();
+    if (request.method !== "POST") {
+      return jsonResponse(405, { success: false, error: "Method not allowed", phase: "method_not_allowed" }, request, requestId);
+    }
+
     if (path !== SUBMIT_ENDPOINT_PATH && path !== TICKET_ENDPOINT_PATH) {
       return jsonResponse(404, { success: false, error: "Unknown endpoint", phase: "validate" }, request, requestId);
     }
@@ -246,10 +252,63 @@ function corsHeaders(request: Request): Record<string, string> {
   if (!origin) return {};
   return {
     "Access-Control-Allow-Origin": origin,
-    "Access-Control-Allow-Methods": "POST, OPTIONS",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
     "Access-Control-Allow-Headers": ["Content-Type", HEADER_TICKET_ID, HEADER_TICKET_PROOF].join(", "),
     "Access-Control-Max-Age": "86400",
   };
+}
+
+function turnstileEmbedHtmlResponse(request: Request): Response {
+  const html = `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Security Verification</title>
+  <style>
+    body { font-family: Segoe UI, sans-serif; margin: 0; padding: 24px; background: #0f1115; color: #e8ecf1; }
+    .card { max-width: 420px; margin: 0 auto; padding: 18px; border-radius: 12px; background: #1a1f27; }
+    h1 { font-size: 18px; margin: 0 0 12px 0; }
+    p { margin: 0 0 16px 0; color: #b7c0cc; }
+  </style>
+  <script>
+    function onTurnstileLoad() {
+      var params = new URLSearchParams(window.location.search);
+      var sitekey = params.get("siteKey") || "";
+      var action = params.get("action") || "${DEFAULT_TURNSTILE_ACTION}";
+      if (!sitekey) {
+        document.getElementById("turnstile-widget").textContent = "Missing siteKey query parameter.";
+        return;
+      }
+      turnstile.render("#turnstile-widget", {
+        sitekey: sitekey,
+        action: action,
+        callback: function (token) {
+          window.location.href =
+            "gamepadmapping-turnstile://done?token=" + encodeURIComponent(token || "");
+        },
+      });
+    }
+  </script>
+  <script src="https://challenges.cloudflare.com/turnstile/v0/api.js?onload=onTurnstileLoad" async defer></script>
+</head>
+<body>
+  <div class="card">
+    <h1>Security Verification</h1>
+    <p>Please complete the challenge to continue uploading to the community.</p>
+    <div id="turnstile-widget"></div>
+  </div>
+</body>
+</html>`;
+
+  return new Response(html, {
+    status: 200,
+    headers: {
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "no-store",
+      ...corsHeaders(request),
+    },
+  });
 }
 
 async function issueOneTimeTicket(
