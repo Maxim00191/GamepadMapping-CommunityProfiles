@@ -1,7 +1,9 @@
 export interface Env {
   GH_TOKEN: string;
-  /** Optional Turnstile secret. When set, /ticket requires a valid turnstileToken. */
+  /** Turnstile secret for /ticket. Required unless ALLOW_TICKET_WITHOUT_TURNSTILE=true (local dev only). */
   TURNSTILE_SECRET_KEY?: string;
+  /** When "true", /ticket may run without TURNSTILE_SECRET_KEY. Never enable in production. */
+  ALLOW_TICKET_WITHOUT_TURNSTILE?: string;
   /** Optional expected Turnstile action for /ticket (default: "community_upload_ticket"). */
   TURNSTILE_EXPECTED_ACTION?: string;
   /** Set in wrangler.toml [vars] (or dashboard); must match the client’s community repo settings. */
@@ -324,6 +326,10 @@ async function verifyTurnstileIfConfigured(
 ): Promise<string | null> {
   const secret = (env.TURNSTILE_SECRET_KEY ?? "").trim();
   if (!secret) {
+    const allowDev = (env.ALLOW_TICKET_WITHOUT_TURNSTILE ?? "").trim().toLowerCase() === "true";
+    if (!allowDev) {
+      return "Turnstile is not configured (set TURNSTILE_SECRET_KEY, or ALLOW_TICKET_WITHOUT_TURNSTILE=true for local dev only)";
+    }
     return null;
   }
 
@@ -537,8 +543,11 @@ function validatePayloadAgainstPinnedRepo(body: Payload, owner: string, repo: st
   if (files.length > MAX_FILES) throw new Error(`Too many files (max ${MAX_FILES})`);
 
   const prefix = catalogFolder + "/";
+  const seenRelative = new Set<string>();
   for (const f of files) {
     const rel = normalizeRelativePath(f.relativePath);
+    if (seenRelative.has(rel)) throw new Error(`Duplicate relativePath: ${f.relativePath}`);
+    seenRelative.add(rel);
     if (!rel.startsWith(prefix)) throw new Error(`Invalid relativePath: ${f.relativePath}`);
     if (!rel.toLowerCase().endsWith(".json")) {
       throw new Error(`Only .json files are allowed: ${f.relativePath}`);
