@@ -39,6 +39,32 @@ const DEFAULT_OWNER = "Maxim00191";
 const DEFAULT_REPO = "GamepadMapping-CommunityProfiles";
 const DEFAULT_BRANCH = "main";
 
+type ErrorPhase =
+  | "misconfigured"
+  | "unauthorized"
+  | "rate_limited"
+  | "method_not_allowed"
+  | "invalid_json"
+  | "validate"
+  | "github_resolve_branch"
+  | "github_create_branch"
+  | "github_upload_file"
+  | "github_create_pr"
+  | "internal";
+
+class WorkerResponseError extends Error {
+  constructor(
+    readonly httpStatus: number,
+    readonly phase: ErrorPhase,
+    message: string,
+    readonly detail?: string,
+    readonly github?: { status: number; message?: string; errors?: unknown }
+  ) {
+    super(message);
+    this.name = "WorkerResponseError";
+  }
+}
+
 export default {
   async fetch(request: Request, env: Env): Promise<Response> {
     if (request.method === "OPTIONS") {
@@ -46,22 +72,34 @@ export default {
     }
 
     if (request.method !== "POST") {
-      return jsonResponse(405, { success: false, error: "Method not allowed" }, request);
+      return jsonResponse(405, { success: false, error: "Method not allowed", phase: "method_not_allowed" }, request, crypto.randomUUID());
     }
+
+    const requestId = crypto.randomUUID();
 
     try {
       const uploadKey = (env.UPLOAD_API_KEY ?? "").trim();
       if (uploadKey.length === 0) {
-        return jsonResponse(500, { success: false, error: "Server misconfigured (UPLOAD_API_KEY)" }, request);
+        return jsonResponse(
+          500,
+          { success: false, error: "Server misconfigured (UPLOAD_API_KEY)", phase: "misconfigured" },
+          request,
+          requestId
+        );
       }
       const auth = request.headers.get("Authorization") ?? "";
       if (auth !== `Bearer ${uploadKey}`) {
-        return jsonResponse(401, { success: false, error: "Unauthorized" }, request);
+        return jsonResponse(401, { success: false, error: "Unauthorized", phase: "unauthorized" }, request, requestId);
       }
 
       const token = (env.GH_TOKEN ?? "").trim();
       if (!token) {
-        return jsonResponse(500, { success: false, error: "Server misconfigured (GH_TOKEN)" }, request);
+        return jsonResponse(
+          500,
+          { success: false, error: "Server misconfigured (GH_TOKEN)", phase: "misconfigured" },
+          request,
+          requestId
+        );
       }
 
       const owner = (env.REPO_OWNER ?? DEFAULT_OWNER).trim();
@@ -77,7 +115,16 @@ export default {
         const raw = await env.LIMIT_KV.get(kvKey);
         const count = parseInt(raw ?? "0", 10) || 0;
         if (count >= limit) {
-          return jsonResponse(429, { success: false, error: `Daily upload limit reached (${limit}/day)` }, request);
+          return jsonResponse(
+            429,
+            {
+              success: false,
+              error: `Daily upload limit reached (${limit}/day)`,
+              phase: "rate_limited",
+            },
+            request,
+            requestId
+          );
         }
       }
 
@@ -85,12 +132,36 @@ export default {
       try {
         body = (await request.json()) as Payload;
       } catch {
-        return jsonResponse(400, { success: false, error: "Invalid JSON body" }, request);
+        return jsonResponse(400, { success: false, error: "Invalid JSON body", phase: "invalid_json" }, request, requestId);
       }
 
-      validatePayloadAgainstPinnedRepo(body, owner, repo, baseBranch);
+      try {
+        validatePayloadAgainstPinnedRepo(body, owner, repo, baseBranch);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        return jsonResponse(400, { success: false, error: msg, phase: "validate" }, request, requestId);
+      }
 
-      const prUrl = await submitPullRequest(token, body, owner, repo, baseBranch);
+      let prUrl: string;
+      try {
+        prUrl = await submitPullRequest(token, body, owner, repo, baseBranch);
+      } catch (e) {
+        if (e instanceof WorkerResponseError) {
+          return jsonResponse(
+            e.httpStatus,
+            {
+              success: false,
+              error: e.message,
+              phase: e.phase,
+              ...(e.detail ? { detail: e.detail } : {}),
+              ...(e.github ? { github: e.github } : {}),
+            },
+            request,
+            requestId
+          );
+        }
+        throw e;
+      }
 
       if (env.LIMIT_KV) {
         const limit = Math.max(1, parseInt(env.DAILY_UPLOAD_LIMIT ?? "20", 10) || 20);
@@ -103,11 +174,16 @@ export default {
         await env.LIMIT_KV.put(kvKey, String(count + 1), { expirationTtl: 172800 });
       }
 
-      return jsonResponse(200, { success: true, pullRequestHtmlUrl: prUrl }, request);
+      return jsonResponse(200, { success: true, pullRequestHtmlUrl: prUrl }, request, requestId);
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      console.error("community-upload:", msg);
-      return jsonResponse(502, { success: false, error: "Upstream request failed" }, request);
+      console.error("community-upload:", requestId, msg);
+      return jsonResponse(
+        500,
+        { success: false, error: "Unexpected server error", phase: "internal" },
+        request,
+        requestId
+      );
     }
   },
 };
@@ -123,14 +199,27 @@ function corsHeaders(request: Request): Record<string, string> {
   };
 }
 
-function jsonResponse(status: number, obj: Record<string, unknown>, request: Request): Response {
-  return new Response(JSON.stringify(obj), {
+function jsonResponse(status: number, obj: Record<string, unknown>, request: Request, requestId: string): Response {
+  const body = { requestId, ...obj };
+  return new Response(JSON.stringify(body), {
     status,
     headers: {
       "Content-Type": "application/json; charset=utf-8",
+      "X-Request-Id": requestId,
       ...corsHeaders(request),
     },
   });
+}
+
+function parseGithubErrorPayload(text: string): { message?: string; errors?: unknown } {
+  const trimmed = text.trim();
+  if (!trimmed) return {};
+  try {
+    const o = JSON.parse(trimmed) as { message?: string; errors?: unknown };
+    return { message: o.message, errors: o.errors };
+  } catch {
+    return { message: trimmed.length > 800 ? trimmed.slice(0, 800) + "…" : trimmed };
+  }
 }
 
 function lc(s: string): string {
@@ -266,10 +355,21 @@ async function getBranchHeadSha(token: string, owner: string, repo: string, bran
   const path = `repos/${encodeURIComponent(owner)}/${encodeURIComponent(repo)}/git/ref/heads/${encodeURIComponent(branch)}`;
   const res = await gh(token, "GET", path);
   const text = await res.text();
-  if (!res.ok) throw new Error(`Resolve branch failed: ${res.status} ${text}`);
+  if (!res.ok) {
+    const ge = parseGithubErrorPayload(text);
+    throw new WorkerResponseError(
+      502,
+      "github_resolve_branch",
+      `Could not resolve base branch "${branch}" (GitHub HTTP ${res.status}).`,
+      ge.message,
+      { status: res.status, message: ge.message, errors: ge.errors }
+    );
+  }
   const data = JSON.parse(text) as { object?: { sha?: string } };
   const sha = data.object?.sha;
-  if (!sha) throw new Error("Could not read branch SHA");
+  if (!sha) {
+    throw new WorkerResponseError(502, "github_resolve_branch", "GitHub response did not include a branch SHA.", text.slice(0, 400));
+  }
   return sha;
 }
 
@@ -280,7 +380,16 @@ async function createBranch(token: string, owner: string, repo: string, newBranc
     sha: baseSha,
   });
   const text = await res.text();
-  if (!res.ok) throw new Error(`Create branch failed: ${res.status} ${text}`);
+  if (!res.ok) {
+    const ge = parseGithubErrorPayload(text);
+    throw new WorkerResponseError(
+      502,
+      "github_create_branch",
+      `Could not create upload branch (GitHub HTTP ${res.status}).`,
+      ge.message,
+      { status: res.status, message: ge.message, errors: ge.errors }
+    );
+  }
 }
 
 async function tryGetBlobSha(
@@ -320,7 +429,17 @@ async function putRepositoryFile(
 
   const res = await gh(token, "PUT", path, payload);
   const text = await res.text();
-  if (!res.ok) throw new Error(`Upload file failed: ${res.status} ${text}`);
+  if (!res.ok) {
+    const ge = parseGithubErrorPayload(text);
+    const displayPath = escapedPath.replace(/%2F/g, "/");
+    throw new WorkerResponseError(
+      502,
+      "github_upload_file",
+      `Could not write template file to the submission branch (GitHub HTTP ${res.status}).`,
+      `File: ${displayPath}${ge.message ? ` — ${ge.message}` : ""}`,
+      { status: res.status, message: ge.message, errors: ge.errors }
+    );
+  }
 }
 
 async function createPullRequest(
@@ -340,9 +459,20 @@ async function createPullRequest(
     base: baseBranch,
   });
   const text = await res.text();
-  if (!res.ok) throw new Error(`Create pull request failed: ${res.status} ${text}`);
+  if (!res.ok) {
+    const ge = parseGithubErrorPayload(text);
+    throw new WorkerResponseError(
+      502,
+      "github_create_pr",
+      `Could not open the pull request (GitHub HTTP ${res.status}).`,
+      ge.message,
+      { status: res.status, message: ge.message, errors: ge.errors }
+    );
+  }
   const data = JSON.parse(text) as { html_url?: string };
-  if (!data.html_url) throw new Error("Missing PR URL in response");
+  if (!data.html_url) {
+    throw new WorkerResponseError(502, "github_create_pr", "GitHub did not return a pull request URL.", text.slice(0, 400));
+  }
   return data.html_url;
 }
 
