@@ -192,20 +192,21 @@ export default {
       }
 
       try {
-        const consumeError = await validateAndConsumeTicket(request, env, payloadSha256);
-        if (consumeError) {
-          return jsonResponse(401, { success: false, error: consumeError, phase: "unauthorized" }, request, requestId);
-        }
-
         validatePayloadAgainstPinnedRepo(body, owner, repo, baseBranch);
       } catch (e) {
         const msg = e instanceof Error ? e.message : String(e);
         return jsonResponse(400, { success: false, error: msg, phase: "validate" }, request, requestId);
       }
 
+      const ticketResult = await validateUploadTicket(request, env, payloadSha256);
+      if ("error" in ticketResult) {
+        return jsonResponse(401, { success: false, error: ticketResult.error, phase: "unauthorized" }, request, requestId);
+      }
+
       let prUrl: string;
       try {
         await ensurePipelineIsIdle(token, owner, repo, baseBranch);
+        await consumeUploadTicket(env, ticketResult.ticketId);
         prUrl = await submitPullRequest(token, body, owner, repo, baseBranch);
       } catch (e) {
         if (e instanceof WorkerResponseError) {
@@ -469,54 +470,64 @@ interface TurnstileSiteVerifyResponse {
   action?: string;
 }
 
-async function validateAndConsumeTicket(
+/**
+ * Verifies the one-time ticket without deleting it, so a fast 409 (pipeline busy) does not
+ * force the client through Turnstile again.
+ */
+async function validateUploadTicket(
   request: Request,
   env: Env,
   contentSha256: string
-): Promise<string | null> {
+): Promise<{ ticketId: string } | { error: string }> {
   if (!env.LIMIT_KV) {
-    return "Server misconfigured (LIMIT_KV is required for one-time tickets)";
+    return { error: "Server misconfigured (LIMIT_KV is required for one-time tickets)" };
   }
 
   const ticketId = (request.headers.get(HEADER_TICKET_ID) ?? "").trim();
   const ticketProof = (request.headers.get(HEADER_TICKET_PROOF) ?? "").trim();
   if (!ticketId || !ticketProof) {
-    return "Missing one-time upload ticket headers";
+    return { error: "Missing one-time upload ticket headers" };
   }
 
   const ticketKey = `ticket:${ticketId}`;
   const ticketRaw = await env.LIMIT_KV.get(ticketKey);
   if (!ticketRaw) {
-    return "Upload ticket is invalid or expired";
+    return { error: "Upload ticket is invalid or expired" };
   }
 
   let ticket: TicketRecord;
   try {
     ticket = JSON.parse(ticketRaw) as TicketRecord;
   } catch {
-    return "Upload ticket payload is invalid";
+    return { error: "Upload ticket payload is invalid" };
   }
 
   const nowSeconds = Math.floor(Date.now() / 1000);
   if (ticket.expiresAtUnixSeconds <= nowSeconds) {
     await env.LIMIT_KV.delete(ticketKey);
-    return "Upload ticket has expired";
+    return { error: "Upload ticket has expired" };
   }
 
   const requestPath = `${new URL(request.url).pathname}${new URL(request.url).search}`;
   if (!timingSafeEqual(ticket.payloadSha256, contentSha256)) {
-    return "Upload ticket payload mismatch";
+    return { error: "Upload ticket payload mismatch" };
   }
   if (requestPath !== ticket.submitPath) {
-    return "Upload ticket endpoint mismatch";
+    return { error: "Upload ticket endpoint mismatch" };
   }
 
   if (!timingSafeEqual(ticketProof, ticket.ticketProof)) {
-    return "Upload ticket proof mismatch";
+    return { error: "Upload ticket proof mismatch" };
   }
 
-  await env.LIMIT_KV.delete(ticketKey);
-  return null;
+  return { ticketId };
+}
+
+async function consumeUploadTicket(env: Env, ticketId: string): Promise<void> {
+  if (!env.LIMIT_KV) {
+    return;
+  }
+  await env.LIMIT_KV.delete(`ticket:${ticketId}`);
 }
 
 function normalizeSubmitPath(raw: string | undefined): string {
