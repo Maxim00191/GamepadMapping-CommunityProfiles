@@ -1,0 +1,505 @@
+{
+  "schemaVersion": 1,
+  "profileId": "default",
+  "templateGroupId": "default",
+  "EffectiveTemplateGroupId": "default",
+  "templateCatalogFolder": "Elden Ring - test/test 2",
+  "displayName": "艾尔登法环 - 键鼠（组合）",
+  "author": "test 2",
+  "communityListingDescription": "test",
+  "displayNameKey": "",
+  "mappings": [
+    {
+      "from": {
+        "type": "Button",
+        "value": "A"
+      },
+      "keyboardKey": "Space",
+      "description": "",
+      "trigger": "Pressed",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "A"
+      },
+      "keyboardKey": "Space",
+      "description": "",
+      "trigger": "Released",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "B"
+      },
+      "keyboardKey": "LeftCtrl",
+      "description": "",
+      "trigger": "Pressed",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "X"
+      },
+      "keyboardKey": "R",
+      "description": "",
+      "trigger": "Pressed",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "X"
+      },
+      "keyboardKey": "R",
+      "description": "",
+      "trigger": "Released",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "Y"
+      },
+      "keyboardKey": "F",
+      "description": "",
+      "trigger": "Pressed",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "Y"
+      },
+      "keyboardKey": "F",
+      "description": "",
+      "trigger": "Released",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "LeftShoulder"
+      },
+      "keyboardKey": "LeftShift",
+      "description": "",
+      "trigger": "Pressed",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "LeftShoulder"
+      },
+      "keyboardKey": "LeftShift",
+      "description": "",
+      "trigger": "Released",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "RightShoulder"
+      },
+      "keyboardKey": "LeftClick",
+      "description": "",
+      "trigger": "Pressed",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "RightShoulder"
+      },
+      "keyboardKey": "LeftClick",
+      "description": "",
+      "trigger": "Released",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "LeftThumb"
+      },
+      "keyboardKey": "Q",
+      "description": "",
+      "trigger": "Pressed",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "LeftThumb"
+      },
+      "keyboardKey": "Q",
+      "description": "",
+      "trigger": "Released",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "RightThumb"
+      },
+      "keyboardKey": "P",
+      "description": "",
+      "trigger": "Pressed",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "RightThumb"
+      },
+      "keyboardKey": "P",
+      "description": "",
+      "trigger": "Released",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "Back"
+      },
+      "keyboardKey": "G",
+      "description": "",
+      "trigger": "Pressed",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "Back"
+      },
+      "keyboardKey": "G",
+      "description": "",
+      "trigger": "Released",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "Start"
+      },
+      "keyboardKey": "Escape",
+      "description": "",
+      "trigger": "Pressed",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "Start"
+      },
+      "keyboardKey": "Escape",
+      "description": "",
+      "trigger": "Released",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "DPadUp"
+      },
+      "keyboardKey": "Up",
+      "description": "",
+      "trigger": "Pressed",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "DPadUp"
+      },
+      "keyboardKey": "Up",
+      "description": "",
+      "trigger": "Released",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "DPadDown"
+      },
+      "keyboardKey": "Down",
+      "description": "",
+      "trigger": "Pressed",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "DPadDown"
+      },
+      "keyboardKey": "Down",
+      "description": "",
+      "trigger": "Released",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "DPadLeft"
+      },
+      "keyboardKey": "Left",
+      "description": "",
+      "trigger": "Pressed",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "DPadLeft"
+      },
+      "keyboardKey": "Left",
+      "description": "",
+      "trigger": "Released",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "DPadRight"
+      },
+      "keyboardKey": "Right",
+      "description": "",
+      "trigger": "Pressed",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "DPadRight"
+      },
+      "keyboardKey": "Right",
+      "description": "",
+      "trigger": "Released",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "LeftShoulder + A"
+      },
+      "keyboardKey": "E",
+      "description": "",
+      "trigger": "Pressed",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "LeftShoulder + A"
+      },
+      "keyboardKey": "E",
+      "description": "",
+      "trigger": "Released",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "LeftShoulder + B"
+      },
+      "keyboardKey": "V",
+      "description": "",
+      "trigger": "Pressed",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "LeftShoulder + B"
+      },
+      "keyboardKey": "V",
+      "description": "",
+      "trigger": "Released",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "LeftShoulder + X"
+      },
+      "keyboardKey": "Up",
+      "description": "",
+      "trigger": "Pressed",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "LeftShoulder + X"
+      },
+      "keyboardKey": "Up",
+      "description": "",
+      "trigger": "Released",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "LeftShoulder + Y"
+      },
+      "keyboardKey": "Down",
+      "description": "",
+      "trigger": "Pressed",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "LeftShoulder + Y"
+      },
+      "keyboardKey": "Down",
+      "description": "",
+      "trigger": "Released",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "LeftThumbstick",
+        "value": "Up"
+      },
+      "keyboardKey": "W",
+      "description": "",
+      "trigger": "Pressed",
+      "analogThreshold": 0.25,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "LeftThumbstick",
+        "value": "Down"
+      },
+      "keyboardKey": "S",
+      "description": "",
+      "trigger": "Pressed",
+      "analogThreshold": 0.25,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "LeftThumbstick",
+        "value": "Left"
+      },
+      "keyboardKey": "A",
+      "description": "",
+      "trigger": "Pressed",
+      "analogThreshold": 0.25,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "LeftThumbstick",
+        "value": "Right"
+      },
+      "keyboardKey": "D",
+      "description": "",
+      "trigger": "Pressed",
+      "analogThreshold": 0.25,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "RightThumbstick",
+        "value": "X"
+      },
+      "keyboardKey": "MouseX",
+      "description": "",
+      "trigger": "Pressed",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "RightThumbstick",
+        "value": "Y"
+      },
+      "keyboardKey": "MouseY",
+      "description": "",
+      "trigger": "Pressed",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    }
+  ]
+}
