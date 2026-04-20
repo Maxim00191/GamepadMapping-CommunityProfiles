@@ -18,17 +18,8 @@
     "downloadUrl": "https://raw.githubusercontent.com/Maxim00191/GamepadMapping-CommunityProfiles/main/Classic 3rd Game/onfoot-basic-maxim0191.json"
   },
   {
-    "id": "default",
-    "displayName": "艾尔登法环 - 键鼠（组合）",
-    "author": "test",
-    "description": "test",
-    "catalogFolder": "Elden Ring - test/test",
-    "fileName": "default.json",
-    "downloadUrl": "https://raw.githubusercontent.com/Maxim00191/GamepadMapping-CommunityProfiles/main/Elden Ring - test/test/default.json"
-  },
-  {
     "id": "explore-maxim0191",
-    "displayName": "洛克王国世界·探索 - maxim0191",
+    "displayName": "Roco Kingdom World · Exploration – maxim0191",
     "author": "Maxim0191",
     "description": "Template for Roco Kingdom",
     "catalogFolder": "Roco Kingdom",
@@ -37,7 +28,7 @@
   },
   {
     "id": "fight-maxim0191",
-    "displayName": "洛克王国世界·战斗 - maxim0191",
+    "displayName": "Roco Kingdom World · Battle – maxim0191",
     "author": "Maxim0191",
     "description": "Template for Roco Kingdom",
     "catalogFolder": "Roco Kingdom",
