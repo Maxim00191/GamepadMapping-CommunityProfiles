@@ -79,6 +79,12 @@ def generate_index():
                 "fileName": template_file.name,
                 "downloadUrl": f"https://raw.githubusercontent.com/{owner}/{repo}/{branch}/{rel_posix}",
             }
+            display_names = data.get("displayNames")
+            if isinstance(display_names, dict) and display_names:
+                template_info["displayNames"] = display_names
+            dnk = (data.get("displayNameKey") or "").strip()
+            if dnk:
+                template_info["displayNameKey"] = dnk
             index.append(template_info)
         except Exception as e:
             print(f"Error parsing {template_file}: {e}")
