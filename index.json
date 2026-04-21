@@ -24,7 +24,10 @@
     "description": "Template for Roco Kingdom",
     "catalogFolder": "Roco Kingdom",
     "fileName": "explore-maxim0191.json",
-    "downloadUrl": "https://raw.githubusercontent.com/Maxim00191/GamepadMapping-CommunityProfiles/main/Roco Kingdom/explore-maxim0191.json"
+    "downloadUrl": "https://raw.githubusercontent.com/Maxim00191/GamepadMapping-CommunityProfiles/main/Roco Kingdom/explore-maxim0191.json",
+    "displayNames": {
+      "zh-CN": "洛克王国世界·探索 - maxim0191"
+    }
   },
   {
     "id": "fight-maxim0191",
@@ -33,6 +36,9 @@
     "description": "Template for Roco Kingdom",
     "catalogFolder": "Roco Kingdom",
     "fileName": "fight-maxim0191.json",
-    "downloadUrl": "https://raw.githubusercontent.com/Maxim00191/GamepadMapping-CommunityProfiles/main/Roco Kingdom/fight-maxim0191.json"
+    "downloadUrl": "https://raw.githubusercontent.com/Maxim00191/GamepadMapping-CommunityProfiles/main/Roco Kingdom/fight-maxim0191.json",
+    "displayNames": {
+      "zh-CN": "洛克王国世界·战斗 - maxim0191"
+    }
   }
 ]
