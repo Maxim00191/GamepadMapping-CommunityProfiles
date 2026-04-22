@@ -510,21 +510,6 @@
     {
       "from": {
         "type": "Button",
-        "value": "Back"
-      },
-      "actionId": "tab--battle-view-battle-log-tab",
-      "description": "Battle: battle log (Tab)",
-      "trigger": "Released",
-      "analogThreshold": null,
-      "holdKeyboardKey": "",
-      "holdThresholdMs": null,
-      "descriptions": {
-        "zh-CN": "战斗：查看对战记录 (Tab)"
-      }
-    },
-    {
-      "from": {
-        "type": "Button",
         "value": "Start"
       },
       "actionId": "enter--battle-open-chat-enter",
