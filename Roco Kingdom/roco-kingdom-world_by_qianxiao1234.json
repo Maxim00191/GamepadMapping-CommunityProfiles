@@ -1,0 +1,443 @@
+﻿{
+  "schemaVersion": 1,
+  "profileId": "roco-kingdom-world_by_qianxiao1234",
+  "templateGroupId": "roco-kingdom-world_by_qianxiao1234",
+  "EffectiveTemplateGroupId": "roco-kingdom-world_by_qianxiao1234",
+  "templateCatalogFolder": "Roco Kingdom",
+  "displayName": "洛克王国：世界 by 浅笑科技",
+  "author": "浅笑科技",
+  "displayNameKey": "",
+  "targetProcessName": "NRC-Win64-Shipping",
+  "keyboardActions": [
+    {
+      "id": "赛季通行证",
+      "keyboardKey": "F1",
+      "description": "赛季通行证"
+    },
+    {
+      "id": "活动",
+      "keyboardKey": "F2",
+      "description": "活动"
+    },
+    {
+      "id": "魔法师手册",
+      "keyboardKey": "F3",
+      "description": "魔法师手册"
+    },
+    {
+      "id": "图鉴",
+      "keyboardKey": "F4",
+      "description": "图鉴"
+    },
+    {
+      "id": "退出家园",
+      "keyboardKey": "F12",
+      "description": "退出家园"
+    },
+    {
+      "id": "任务",
+      "keyboardKey": "J",
+      "description": "打开任务"
+    },
+    {
+      "id": "精灵",
+      "keyboardKey": "P",
+      "description": "打开精灵背包"
+    },
+    {
+      "id": "背包",
+      "keyboardKey": "B",
+      "description": "打开背包"
+    },
+    {
+      "id": "地图",
+      "keyboardKey": "M",
+      "description": "打开地图"
+    },
+    {
+      "id": "精灵1 / 技能1",
+      "keyboardKey": "D1",
+      "description": "精灵1 / 技能1"
+    },
+    {
+      "id": "精灵2 / 技能2",
+      "keyboardKey": "D2",
+      "description": "精灵2 / 技能2"
+    },
+    {
+      "id": "精灵3 / 技能3",
+      "keyboardKey": "D3",
+      "description": "精灵3 / 技能3"
+    },
+    {
+      "id": "精灵4 / 技能4",
+      "keyboardKey": "D4",
+      "description": "精灵4 / 技能4"
+    },
+    {
+      "id": "精灵5",
+      "keyboardKey": "D5",
+      "description": "精灵5"
+    },
+    {
+      "id": "精灵6",
+      "keyboardKey": "D6",
+      "description": "精灵6"
+    }
+  ],
+  "radialMenus": [
+    {
+      "id": "MENU",
+      "displayName": "菜单",
+      "displayNames": {
+        "zh-CN": "菜单"
+      },
+      "joystick": "RightStick",
+      "items": [
+        {
+          "actionId": "魔法师手册",
+          "label": ""
+        },
+        {
+          "actionId": "任务",
+          "label": ""
+        },
+        {
+          "actionId": "地图",
+          "label": ""
+        },
+        {
+          "actionId": "图鉴",
+          "label": ""
+        },
+        {
+          "actionId": "精灵",
+          "label": ""
+        },
+        {
+          "actionId": "背包",
+          "label": ""
+        },
+        {
+          "actionId": "赛季通行证",
+          "label": ""
+        },
+        {
+          "actionId": "活动",
+          "label": ""
+        },
+        {
+          "actionId": "退出家园",
+          "label": ""
+        }
+      ]
+    },
+    {
+      "id": "CHOOSE",
+      "displayName": "选择精灵 / 技能",
+      "displayNames": {
+        "zh-CN": "选择精灵 / 技能"
+      },
+      "joystick": "RightStick",
+      "items": [
+        {
+          "actionId": "精灵1 / 技能1",
+          "label": ""
+        },
+        {
+          "actionId": "精灵2 / 技能2",
+          "label": ""
+        },
+        {
+          "actionId": "精灵3 / 技能3",
+          "label": ""
+        },
+        {
+          "actionId": "精灵4 / 技能4",
+          "label": ""
+        },
+        {
+          "actionId": "精灵5",
+          "label": ""
+        },
+        {
+          "actionId": "精灵6",
+          "label": ""
+        }
+      ]
+    }
+  ],
+  "mappings": [
+    {
+      "from": {
+        "type": "Button",
+        "value": "Start"
+      },
+      "keyboardKey": "Escape",
+      "description": "ESC",
+      "trigger": "Pressed",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "Back"
+      },
+      "keyboardKey": "",
+      "description": "选择菜单",
+      "trigger": "Pressed",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null,
+      "radialMenu": {
+        "radialMenuId": "MENU"
+      }
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "X"
+      },
+      "keyboardKey": "F",
+      "description": "F键（交互）",
+      "trigger": "Pressed",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "A"
+      },
+      "keyboardKey": "Space",
+      "description": "空格键（跳跃）",
+      "trigger": "Pressed",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "B"
+      },
+      "keyboardKey": "LeftClick",
+      "description": "鼠标左键",
+      "trigger": "Pressed",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "Y"
+      },
+      "keyboardKey": "X",
+      "description": "取消乘骑 / 取消牵手 / 长按乘骑",
+      "trigger": "Tap",
+      "analogThreshold": null,
+      "holdKeyboardKey": "R",
+      "holdThresholdMs": 250
+    },
+    {
+      "from": {
+        "type": "LeftThumbstick",
+        "value": "Up"
+      },
+      "keyboardKey": "W",
+      "description": "向前移动",
+      "descriptions": {
+        "zh-CN": "向前移动"
+      },
+      "trigger": "Pressed",
+      "analogThreshold": 0.25,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "LeftThumbstick",
+        "value": "Down"
+      },
+      "keyboardKey": "S",
+      "description": "向后移动",
+      "descriptions": {
+        "zh-CN": "向后移动"
+      },
+      "trigger": "Pressed",
+      "analogThreshold": 0.25,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "LeftThumbstick",
+        "value": "Left"
+      },
+      "keyboardKey": "A",
+      "description": "向左移动",
+      "descriptions": {
+        "zh-CN": "向左移动"
+      },
+      "trigger": "Pressed",
+      "analogThreshold": 0.25,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "LeftThumbstick",
+        "value": "Right"
+      },
+      "keyboardKey": "D",
+      "description": "向右移动",
+      "descriptions": {
+        "zh-CN": "向右移动"
+      },
+      "trigger": "Pressed",
+      "analogThreshold": 0.25,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "RightThumbstick",
+        "value": "X"
+      },
+      "keyboardKey": "MouseX",
+      "description": "水平旋转视角",
+      "descriptions": {
+        "zh-CN": "水平旋转视角"
+      },
+      "trigger": "Pressed",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "RightThumbstick",
+        "value": "Y"
+      },
+      "keyboardKey": "MouseY",
+      "description": "垂直旋转视角",
+      "descriptions": {
+        "zh-CN": "垂直旋转视角"
+      },
+      "trigger": "Pressed",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "DPadUp"
+      },
+      "keyboardKey": "",
+      "description": "上一个精灵",
+      "trigger": "Tap",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null,
+      "itemCycle": {
+        "direction": "Previous",
+        "slotCount": 6
+      }
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "DPadDown"
+      },
+      "keyboardKey": "",
+      "description": "下一个精灵",
+      "trigger": "Tap",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null,
+      "itemCycle": {
+        "slotCount": 6
+      }
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "DPadLeft"
+      },
+      "keyboardKey": "Q",
+      "description": "选择魔法",
+      "trigger": "Pressed",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "DPadRight"
+      },
+      "keyboardKey": "E",
+      "description": "选择咕噜球",
+      "trigger": "Pressed",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "LeftShoulder"
+      },
+      "keyboardKey": "LeftClick",
+      "description": "鼠标左键（瞄准）",
+      "trigger": "Pressed",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "Button",
+        "value": "RightShoulder"
+      },
+      "keyboardKey": "LeftShift",
+      "description": "疾跑 / 精灵视野",
+      "trigger": "Pressed",
+      "analogThreshold": null,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "LeftTrigger",
+        "value": "LeftTrigger"
+      },
+      "keyboardKey": "LeftAlt",
+      "description": "呼出鼠标",
+      "trigger": "Pressed",
+      "analogThreshold": 1.0,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null
+    },
+    {
+      "from": {
+        "type": "RightTrigger",
+        "value": "RightTrigger"
+      },
+      "keyboardKey": "",
+      "description": "选择精灵 / 技能",
+      "trigger": "Pressed",
+      "analogThreshold": 1.0,
+      "holdKeyboardKey": "",
+      "holdThresholdMs": null,
+      "radialMenu": {
+        "radialMenuId": "CHOOSE"
+      }
+    }
+  ]
+}
